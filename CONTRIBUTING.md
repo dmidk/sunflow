@@ -1,6 +1,6 @@
 # Contributing to solarcast
 
-Thank you for your interest in contributing to **solarcast**! This project is a collaboration between the [Danish Meteorological Institute (DMI)](https://www.dmi.dk) and [ENFOR](https://enfor.dk).
+Thank you for your interest in contributing to **solarcast**! This is a collaborative project based at the Danish Meteorological Institute.
 
 ## Getting Started
 
