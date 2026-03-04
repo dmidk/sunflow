@@ -1,6 +1,6 @@
-# solarcast
+# solarcast: solar nowcasting for Denmark
 
-Scientific development framework for solar irradiance nowcasting at the [Danish Meteorological Institute (DMI)](https://www.dmi.dk).
+Scientific development framework for solar nowcasting at the [Danish Meteorological Institute (DMI)](https://www.dmi.dk).
 
 
 ## Overview
