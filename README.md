@@ -39,14 +39,14 @@ import solarnow
 ## Project Structure
 
 ```
-solarcast/
+solarnow/
 ├── solarnow/          # Main Python package
 │   └── __init__.py
 ├── tests/              # Unit and integration tests
 ├── notebooks/          # Jupyter notebooks for exploration and demos
 ├── pyproject.toml      # Package metadata and build configuration
 ├── CONTRIBUTING.md     # Contribution guidelines
-├── LICENSE             # Apache 2.0 License
+├── LICENSE             # MIT License
 └── README.md
 ```
 
