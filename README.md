@@ -1,11 +1,11 @@
-# solarnow: solar nowcasting for Denmark
+# sunflow: solar nowcasting for Denmark
 
 Scientific development framework for solar nowcasting at the [Danish Meteorological Institute (DMI)](https://www.dmi.dk).
 
 
 ## Overview
 
-`solarnow` provides tools and models for short-range forecasting (nowcasting) of solar irradiance, supporting renewable energy integration and solar power production forecasting in Denmark.
+`sunflow` provides tools and models for short-range forecasting (nowcasting) of solar irradiance, supporting renewable energy integration and solar power production forecasting in Denmark.
 
 ## Future Features
 
@@ -23,15 +23,15 @@ Scientific development framework for solar nowcasting at the [Danish Meteorologi
 Clone the repository and install in editable mode:
 
 ```bash
-git clone https://github.com/dmidk/solarcast.git
-cd solarnow
+git clone https://github.com/dmidk/sunflow.git
+cd sunflow
 pip install -e .
 ```
 
 ## Usage
 
 ```python
-import solarnow
+import sunflow
 
 # Example usage will be documented here as the project develops
 ```
@@ -39,8 +39,8 @@ import solarnow
 ## Project Structure
 
 ```
-solarnow/
-├── solarnow/          # Main Python package
+sunflow/
+├── sunflow/          # Main Python package
 │   └── __init__.py
 ├── tests/              # Unit and integration tests
 ├── notebooks/          # Jupyter notebooks for exploration and demos

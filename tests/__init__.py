@@ -1,1 +1,1 @@
-"""Tests for the solarcast package."""
+"""Tests for the sunflow package."""

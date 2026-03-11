@@ -1,14 +1,14 @@
-# Contributing to solarcast
+# Contributing to sunflow
 
-Thank you for your interest in contributing to **solarnow**! This is a collaborative project based at the Danish Meteorological Institute.
+Thank you for your interest in contributing to **sunflow**! This is a collaborative project based at the Danish Meteorological Institute.
 
 ## Getting Started
 
 1. **Fork** the repository on GitHub.
 2. **Clone** your fork locally:
    ```bash
-   git clone https://github.com/<your-username>/solarnow.git
-   cd solarnow
+   git clone https://github.com/<your-username>/sunflow.git
+   cd sunflow
    ```
 3. **Create a branch** for your changes:
    ```bash
@@ -48,14 +48,14 @@ Thank you for your interest in contributing to **solarnow**! This is a collabora
    ```bash
    git push origin feature/your-feature-name
    ```
-2. Open a **Pull Request** against the `main` branch of `dmidk/solarcast`.
+2. Open a **Pull Request** against the `main` branch of `dmidk/sunflow`.
 3. Describe your changes clearly in the pull request description.
 4. Ensure all tests pass and there are no linting errors.
 5. A maintainer will review your pull request and may request changes.
 
 ## Reporting Issues
 
-If you find a bug or have a feature request, please [open an issue](https://github.com/dmidk/solarcast/issues) on GitHub with a clear description and, where relevant, a minimal reproducible example.
+If you find a bug or have a feature request, please [open an issue](https://github.com/dmidk/sunflow/issues) on GitHub with a clear description and, where relevant, a minimal reproducible example.
 
 ## License
 

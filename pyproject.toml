@@ -3,7 +3,7 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "solarnow"
+name = "sunflow"
 version = "0.1.0"
 description = "Solar irradiance nowcasting framework"
 readme = "README.md"
@@ -35,13 +35,13 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/dmidk/solarnow"
-Repository = "https://github.com/dmidk/solarnow"
-Issues = "https://github.com/dmidk/solarnow/issues"
+Homepage = "https://github.com/dmidk/sunflow"
+Repository = "https://github.com/dmidk/sunflow"
+Issues = "https://github.com/dmidk/sunflow/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["solarnow*"]
+include = ["sunflow*"]
 
 [tool.ruff]
 line-length = 100
