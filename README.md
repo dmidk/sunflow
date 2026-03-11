@@ -1,6 +1,6 @@
 # sunflow: solar nowcasting for Denmark
 
-Scientific development framework for solar nowcasting at the [Danish Meteorological Institute (DMI)](https://www.dmi.dk).
+Scientific development framework for open sourced solar nowcasting at the [Danish Meteorological Institute (DMI)](https://www.dmi.dk).
 
 
 ## Overview
