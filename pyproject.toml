@@ -1,0 +1,44 @@
+[project]
+name = "sunflow"
+version = "1.0.0"
+description = "Solar nowcasting using probabilistic advection with KNMI/DWD satellite data"
+authors = [
+    {name = "Irene Livia Kruse", email = "ikr@dmi.dk"},
+    {name = "Kristian Holten Møller", email = "khm@dmi.dk"},
+    {name = "Kasper Hintz", email = "kah@dmi.dk"},
+]
+
+dependencies = [
+    "xarray>=2023.5.0",
+    "numpy>=1.24.3",
+    "netcdf4==1.7.2",
+    "h5py==3.12.1",
+    "h5netcdf==1.6.1",
+    "requests>=2.31.0",
+    "pvlib>=0.10.0",
+    "pysteps>=1.7.0",
+    "opencv-python-headless>=4.5.0",
+    "SolarSTEPS @ git+https://github.com/dmidk/SolarSTEPS@18012d7b11c56895e14abc39c3800f68a9a44ecb",
+    "loguru>=0.7.3",
+    "isodate>=0.7.2",
+    "fsspec>=2023.1.0",
+    "s3fs>=2023.1.0",
+]
+requires-python = ">=3.12"
+readme = "README.md"
+license = {text = "MIT"}
+
+[project.scripts]
+sunflow = "sunflow.main:cli"
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.isort]
+profile = "black"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.3.0",
+]

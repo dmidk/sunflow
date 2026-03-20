@@ -1,0 +1,37 @@
+---
+KNMI:
+  crs: EPSG:4326
+  format: NetCDF4
+  base_url: https://api.dataplatform.knmi.nl/wms/adaguc-server?dataset=msg_cpp_products&service=wcs&request=getcoverage&
+  variables:
+  - surface_downwelling_shortwave_flux_in_air
+  - surface_downwelling_shortwave_flux_in_air_assuming_clear_sky
+  nc_variable_names:
+    sds: sds
+    sds_cs: sds_cs
+  # Required: Filename format for input data files
+  # filename_format: "{dataset_name}_{timestamp}_{bbox_choice}.nc"
+  # Format for PDS data:
+  filename_format: "NetCDF4_sds_{pds_timestamp}.nc"
+  # Available template variables:
+  #   {dataset_name}: Dataset name (e.g., KNMI)
+  #   {bbox_choice}: Bounding box identifier (e.g., NW_EUROPE)
+  #   {timestamp}: Compact format YYYYMMDDHHMM
+  #   {pds_timestamp}: PDS format YYYY-MM-DDTHH_MM_SSZ
+  #   {year}: Four-digit year (e.g., 2026)
+  #   {month}: Two-digit month (e.g., 03)
+  #   {day}: Two-digit day of month (e.g., 09)
+  #   {hour}: Two-digit hour (e.g., 12)
+  # Path separators are supported, e.g.: "{year}/{month}/{day}/{dataset_name}_{timestamp}.nc"
+
+DWD:
+  base_url: https://opendata.dwd.de/weather/satellite/radiation/sis/
+  variables:
+  - SIS
+  - SISc
+  nc_variable_names:
+    sds: SIS
+    sds_cs: SISc
+  # Required: Filename format for input data files
+  # Supports subdirectories via path separators, e.g.: "{year}/{month}/{day}/{dataset_name}_{timestamp}_{bbox_choice}.nc"
+  filename_format: "{dataset_name}_{timestamp}_{bbox_choice}.nc"

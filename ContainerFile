@@ -1,0 +1,42 @@
+FROM dockerhub.com/python:3.12
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies including git and Python dev headers
+RUN apt-get update -y && \
+    apt-get install -y \
+    build-essential \
+    python3-dev \
+    libgeos-dev \
+    libproj-dev \
+    proj-data \
+    proj-bin \
+    libhdf5-dev \
+    libnetcdf-dev \
+    pkg-config \
+    git && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set up container environment
+ENV USER_ID=1000
+ENV GROUP_ID=1000
+
+# Install Python package manager
+RUN pip install -U pip setuptools wheel pdm
+
+ENV PATH="${PATH}:/root/.local/bin"
+
+# Create application directories
+RUN mkdir -p /data/nowcasts /data/satellite_data
+WORKDIR /project
+
+# Copy project files
+COPY pyproject.toml /project/
+COPY sunflow/ /project/sunflow/
+COPY README.md /project/
+COPY config.yaml /project/
+
+# Install project dependencies
+RUN pdm venv create && pdm install
+
+ENTRYPOINT ["pdm", "run", "python", "-m", "sunflow.main"]
