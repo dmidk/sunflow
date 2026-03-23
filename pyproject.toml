@@ -26,7 +26,14 @@ dependencies = [
 ]
 requires-python = ">=3.12"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+[project.optional-dependencies]
+optional = []
+doc = []
+test = ["pytest>=7", "pytest-cov", "packaging"]
+all = ["sunflow[optional,test,doc]"]
 
 [project.scripts]
 sunflow = "sunflow.main:cli"
@@ -42,3 +49,9 @@ profile = "black"
 dev = [
     "pre-commit>=4.3.0",
 ]
+
+
+[tool.pytest.ini_options]
+addopts = "--cov=sunflow --cov-fail-under=0 --cov-report=term-missing"
+testpaths = ["tests"]
+
