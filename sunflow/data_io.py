@@ -88,17 +88,12 @@ def fetch_current_data_with_retry(
             # If using custom time, don't retry - just raise
             if custom_time:
                 logger.info("Custom time specified. Not retrying.")
-                raise DataNotAvailableError(
-                    f"Data not available for {time_step_str}."
-                )
+                raise DataNotAvailableError(f"Data not available for {time_step_str}.")
 
             time.sleep(30)  # Wait 30 sec before retrying
 
             # Check if the maximum waiting time has been reached
-            if (
-                time.time() - start_time
-                > nowcast_config.max_waiting_time_minutes * 60
-            ):
+            if time.time() - start_time > nowcast_config.max_waiting_time_minutes * 60:
                 raise RuntimeError(
                     f"Maximum wait time of {nowcast_config.max_waiting_time_minutes}"
                     f" minutes reached for {time_step_str}."
@@ -229,9 +224,7 @@ def load_data_from_files(
 
         try:
             ds = xr.open_dataset(filepath)
-            collected.append(
-                ds.assign_coords(time=[time_step.replace(tzinfo=None)])
-            )
+            collected.append(ds.assign_coords(time=[time_step.replace(tzinfo=None)]))
             logger.info(f"Loaded {data_type} from {filepath}")
         except Exception as e:
             logger.error(f"Failed to load {data_type} {filepath}: {e}")
@@ -273,9 +266,7 @@ def check_current_data_existence_s3(
             client_kwargs={"endpoint_url": s3_config.endpoint_url},
         )
         if not fs.exists(s3_path):
-            raise FileNotFoundError(
-                f"Input file not yet found in S3: {s3_path}"
-            )
+            raise FileNotFoundError(f"Input file not yet found in S3: {s3_path}")
     except FileNotFoundError:
         raise
     except Exception as e:
@@ -317,18 +308,12 @@ def load_data_from_s3(
         filename = generate_input_filename(
             time_step, dataset_name, bbox_choice, filename_format
         )
-        s3_path = (
-            f"s3://{s3_config.bucket}/{s3_config.input_prefix}/{filename}"
-        )
+        s3_path = f"s3://{s3_config.bucket}/{s3_config.input_prefix}/{filename}"
 
         try:
             with fs.open(s3_path, "rb") as f:
-                ds = xr.open_dataset(
-                    f, engine="h5netcdf"
-                ).load()  # Load into memory
-            collected.append(
-                ds.assign_coords(time=[time_step.replace(tzinfo=None)])
-            )
+                ds = xr.open_dataset(f, engine="h5netcdf").load()  # Load into memory
+            collected.append(ds.assign_coords(time=[time_step.replace(tzinfo=None)]))
             logger.info(f"Loaded {data_type} from {s3_path}")
         except FileNotFoundError:
             raise FileNotFoundError(
@@ -430,9 +415,7 @@ def fetch_clearsky_with_fallback(
                 continue
 
         if fetched is not None:
-            collected.append(
-                fetched.assign_coords(time=[ts.replace(tzinfo=None)])
-            )
+            collected.append(fetched.assign_coords(time=[ts.replace(tzinfo=None)]))
         else:
             logger.warning(
                 f"No clearsky data found for {ts_str} "
@@ -490,9 +473,7 @@ def save_forecast(
     # Build time coordinate (CF-convention: minutes since forecast reference time)
 
     time_step_naive = time_step.replace(tzinfo=None)
-    _time_units = (
-        f"minutes since {time_step_naive.strftime('%Y-%m-%d %H:%M:%S')}"
-    )
+    _time_units = f"minutes since {time_step_naive.strftime('%Y-%m-%d %H:%M:%S')}"
     time_datetimes = [
         time_step_naive + timedelta(minutes=input_data_frequency_minutes * i)
         for i in range(0, n_steps)

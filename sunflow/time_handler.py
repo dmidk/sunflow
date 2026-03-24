@@ -31,8 +31,7 @@ def generate_time_steps(
     """
     if type == "past_observations":
         return [
-            time_step - timedelta(minutes=i * step_minutes)
-            for i in range(0, n_steps)
+            time_step - timedelta(minutes=i * step_minutes) for i in range(0, n_steps)
         ][::-1]
     else:  # previous_day
         return [

@@ -22,11 +22,7 @@ from .data_io import (
     save_forecast,
 )
 from .downloaders import download_past_data
-from .forecast import (
-    multiply_clearsky,
-    preprocess_data,
-    simple_advection_forecast,
-)
+from .forecast import multiply_clearsky, preprocess_data, simple_advection_forecast
 from .geospatial import check_solar_elevation, get_bbox
 from .time_handler import generate_time_steps, round_time
 from .validation import (
@@ -237,9 +233,7 @@ def run_nowcast(
     logger.info(f"Loading past data for {len(past_time_steps)} time steps...")
     match run_mode:
         case "download":
-            data = download_past_data(
-                past_time_steps, config, bbox, dataset_name
-            )
+            data = download_past_data(past_time_steps, config, bbox, dataset_name)
         case "files":
             data = load_data_from_files(
                 past_time_steps,
@@ -336,9 +330,7 @@ def run_nowcast(
         config["nc_variable_names"]["sds_cs"]
     ].values
     solar_t0 = ratio_data[-1] * sds_cs_t0
-    solar_forecast = np.concatenate(
-        [solar_t0[np.newaxis, :, :], solar_forecast], axis=0
-    )
+    solar_forecast = np.concatenate([solar_t0[np.newaxis, :, :], solar_forecast], axis=0)
 
     # Save forecast (now contains actual solar irradiance, not ratios)
     filename = save_forecast(
@@ -383,8 +375,7 @@ def print_run_summary(
 
     if n_failed:
         failed_lines = "\n  ".join(
-            f"{t.strftime('%Y-%m-%dT%H:%M:%SZ')} ({msg})"
-            for t, msg in failures
+            f"{t.strftime('%Y-%m-%dT%H:%M:%SZ')} ({msg})" for t, msg in failures
         )
         logger.error(f"Failed timesteps:\n  {failed_lines}")
 
@@ -434,9 +425,7 @@ def cli() -> None:
         custom_time = True
     elif args.time:
         time_steps = [args.time]
-        logger.info(
-            f"Using custom time: {args.time.strftime('%Y-%m-%dT%H:%M:%SZ')}"
-        )
+        logger.info(f"Using custom time: {args.time.strftime('%Y-%m-%dT%H:%M:%SZ')}")
         custom_time = True
     else:
         now = datetime.now(timezone.utc)
@@ -445,9 +434,7 @@ def cli() -> None:
             nowcast_config.input_data_availability_delay_minutes,
             nowcast_config.input_data_frequency_minutes,
         )
-        logger.info(
-            f"Script start time: {now.strftime('%Y-%m-%d %H:%M:%S')} UTC"
-        )
+        logger.info(f"Script start time: {now.strftime('%Y-%m-%d %H:%M:%S')} UTC")
         logger.info(
             f"Rounded time for data request: "
             f"{rounded_time.strftime('%Y-%m-%dT%H:%M:%SZ')}"

@@ -205,9 +205,7 @@ def download_past_data(
                 )
                 url = f"{base_url}&coverage={var}"
                 try:
-                    netcdf_file = download_netcdf_knmi(
-                        url, os.getenv("KNMI_API_KEY")
-                    )
+                    netcdf_file = download_netcdf_knmi(url, os.getenv("KNMI_API_KEY"))
                     ds = xr.open_dataset(netcdf_file, engine="h5netcdf")
                     var_datasets.append(ds)
                 except Exception as e:
@@ -222,9 +220,7 @@ def download_past_data(
             if len(var_datasets) == len(config["variables"]):
                 merged_ds = xr.merge(var_datasets, compat="override")
                 collected.append(
-                    merged_ds.assign_coords(
-                        time=[time_step.replace(tzinfo=None)]
-                    )
+                    merged_ds.assign_coords(time=[time_step.replace(tzinfo=None)])
                 )
             else:
                 logger.warning(
@@ -239,9 +235,7 @@ def download_past_data(
                 ds = xr.open_dataset(netcdf_file)
                 ds_subset = subset_to_bbox(ds, bbox)
                 collected.append(
-                    ds_subset.assign_coords(
-                        time=[time_step.replace(tzinfo=None)]
-                    )
+                    ds_subset.assign_coords(time=[time_step.replace(tzinfo=None)])
                 )
             except Exception as e:
                 logger.warning(f"Failed to download {filename}: {e}")
@@ -289,13 +283,9 @@ def download_clearsky_data(
                 f"&BBOX={bbox}&time={clearsky_time_str}"
             )
             try:
-                netcdf_file = download_netcdf_knmi(
-                    url, os.getenv("KNMI_API_KEY")
-                )
+                netcdf_file = download_netcdf_knmi(url, os.getenv("KNMI_API_KEY"))
                 ds = xr.open_dataset(netcdf_file, engine="h5netcdf")
-                collected.append(
-                    ds.assign_coords(time=[time_step.replace(tzinfo=None)])
-                )
+                collected.append(ds.assign_coords(time=[time_step.replace(tzinfo=None)]))
             except Exception as e:
                 logger.warning(f"Failed to download clearsky data: {e}")
                 continue
@@ -310,14 +300,10 @@ def download_clearsky_data(
                 ds = xr.open_dataset(netcdf_file)
                 ds_subset = subset_to_bbox(ds, bbox)
                 collected.append(
-                    ds_subset.assign_coords(
-                        time=[time_step.replace(tzinfo=None)]
-                    )
+                    ds_subset.assign_coords(time=[time_step.replace(tzinfo=None)])
                 )
             except Exception as e:
-                logger.warning(
-                    f"Failed to download clearsky data {filename}: {e}"
-                )
+                logger.warning(f"Failed to download clearsky data {filename}: {e}")
                 continue
 
     if not collected:

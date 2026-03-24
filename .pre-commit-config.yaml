@@ -1,0 +1,27 @@
+# https://pre-commit.com/
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.0.1
+    hooks:
+      - id: trailing-whitespace
+        exclude: requirements.txt
+      - id: end-of-file-fixer
+      - id: check-yaml
+  # isort should run before black as black sometimes tweaks the isort output
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: ["--profile", "black", "--line-length=90"]
+  - repo: https://github.com/psf/black
+    rev: 22.3.0
+    hooks:
+      - id: black
+        exclude: ^Notebooks/
+        args: ["--line-length=90"]
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.0
+    hooks:
+      - id: flake8
+        args: ["--max-line-length=90"]
+        exclude: ^Notebooks/

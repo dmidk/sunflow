@@ -79,9 +79,7 @@ def verify_environment_variables(run_mode: str, dataset_name: str) -> None:
     """
     if run_mode == "download" and dataset_name == "KNMI":
         if not os.getenv("KNMI_API_KEY"):
-            logger.error(
-                "KNMI_API_KEY environment variable not set. Exiting.\n"
-            )
+            logger.error("KNMI_API_KEY environment variable not set. Exiting.\n")
             sys.exit(1)
 
     if run_mode == "s3":
@@ -158,9 +156,7 @@ def validate_clearsky_completeness(
 
     for time_step in time_steps:
         if pd.Timestamp(time_step.replace(tzinfo=None)) not in available:
-            missing_clearsky_times.append(
-                time_step.strftime("%Y-%m-%dT%H:%M:%SZ")
-            )
+            missing_clearsky_times.append(time_step.strftime("%Y-%m-%dT%H:%M:%SZ"))
 
     if missing_clearsky_times:
         raise MissingClearskyDataError(
@@ -170,9 +166,7 @@ def validate_clearsky_completeness(
             "Cannot produce forecast without complete clearsky data. Exiting.\n"
         )
 
-    logger.info(
-        f"Clearsky data complete for all {len(time_steps)} forecast steps"
-    )
+    logger.info(f"Clearsky data complete for all {len(time_steps)} forecast steps")
 
 
 def validate_clearsky_shapes(
@@ -207,6 +201,4 @@ def validate_clearsky_shapes(
                 f"got {clearsky_array.shape}."
             )
 
-    logger.info(
-        f"Clearsky data shapes validated: all match {expected_spatial_shape}"
-    )
+    logger.info(f"Clearsky data shapes validated: all match {expected_spatial_shape}")

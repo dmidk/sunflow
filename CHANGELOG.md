@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added pre-commit configuration for linting and formatting [!6](https://github.com/dmidk/sunflow/pull/6), @khintz
+
+### Changed
+
 - Add .gitignore file and remove unnecessary files from the repository [!1](https://github.com/dmidk/sunflow/pull/1), @khintz
 
 ## [1.0.0]

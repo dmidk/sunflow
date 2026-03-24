@@ -24,9 +24,7 @@ def get_bbox(bbox_choice: str, custom_bbox: str | None = None) -> str | None:
         Bounding box string, or None if the predefined choice has no
         associated value.
     """
-    return (
-        custom_bbox if bbox_choice == "CUSTOM" else BBOX_OPTIONS[bbox_choice]
-    )
+    return custom_bbox if bbox_choice == "CUSTOM" else BBOX_OPTIONS[bbox_choice]
 
 
 def get_coordinates(ds: xr.Dataset) -> tuple[np.ndarray, np.ndarray]:
