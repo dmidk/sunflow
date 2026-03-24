@@ -80,13 +80,7 @@ class NowcastConfig:
             input_data_frequency_minutes=int(
                 os.getenv("INPUT_DATA_FREQUENCY_MINUTES", "15")
             ),
-            max_waiting_time_minutes=int(
-                os.getenv("MAX_WAITING_TIME_MINUTES", "27")
-            ),
-            satellite_data_directory=os.getenv(
-                "SATELLITE_DATA_DIRECTORY", "."
-            ),
-            max_clearsky_fallback_days=int(
-                os.getenv("MAX_CLEARSKY_FALLBACK_DAYS", "3")
-            ),
+            max_waiting_time_minutes=int(os.getenv("MAX_WAITING_TIME_MINUTES", "27")),
+            satellite_data_directory=os.getenv("SATELLITE_DATA_DIRECTORY", "."),
+            max_clearsky_fallback_days=int(os.getenv("MAX_CLEARSKY_FALLBACK_DAYS", "3")),
         )
