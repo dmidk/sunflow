@@ -23,5 +23,5 @@ repos:
     rev: 7.1.0
     hooks:
       - id: flake8
-        args: ["--max-line-length=90"]
+        args: ["--max-line-length=79"]
         exclude: ^Notebooks/
