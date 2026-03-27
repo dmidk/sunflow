@@ -12,7 +12,8 @@ jobs:
       fail-fast: false  # don't cancel other matrix jobs when one fails
       matrix:
         python-version: ["3.12", "3.13"]
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # pysteps do not support mac with Apple chips
+        os: [ubuntu-latest, windows-latest]
 
     runs-on: ${{ matrix.os }}
 
