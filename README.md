@@ -50,7 +50,8 @@ sunflow
  podman build -f ContainerFile -t sunflow .
 ```
 
-On pushes to `main` and version tags (`v*`), GitHub Actions also builds and publishes the image to GHCR as:
+GitHub Actions builds the container on pushes to `main` and on pull requests.
+Publishing to ghcr.io happens only for version tags (`v*`), with tags like `v1.2.3` and `latest`, as:
 
 ```text
 ghcr.io/dmidk/sunflow

@@ -43,7 +43,7 @@ jobs:
             type=ref,event=tag
             type=raw,value=latest
 
-      - name: Build and push image
+      - name: Build image (push on version tags)
         uses: docker/build-push-action@v7
         with:
           context: .
