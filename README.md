@@ -19,24 +19,23 @@ cd sunflow
 To contribute, fork the repository first — see [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
 
 ## Local development
-This project uses [pdm](https://pdm.fming.dev/latest/) for dependency management.
-Other package managers, such as [uv](https://docs.astral.sh/uv/getting-started/), also work.
-`pdm` can be installed with:
+This project uses [uv](https://docs.astral.sh/uv/getting-started/) for dependency management.
+
+`uv` can be installed with:
 
 ```shell
-curl -sSL https://raw.githubusercontent.com/pdm-project/pdm/main/install-pdm.py | python3 -
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 After this you can create a virtualenv and install `sunflow` with
 
 ```shell
-pdm venv create
-pdm install
+uv sync
 ```
 
 The suite can then be run by
 ```shell
-pdm run sunflow
+uv run sunflow
 ```
 or, after activating the virtualenv (`source .venv/bin/activate`):
 ```shell
@@ -49,6 +48,12 @@ sunflow
 
 ```shell
  podman build -f ContainerFile -t sunflow .
+```
+
+On pushes to `main` and version tags (`v*`), GitHub Actions also builds and publishes the image to GHCR as:
+
+```text
+ghcr.io/dmidk/sunflow
 ```
 
 ### Running the Container
@@ -143,5 +148,5 @@ podman run -it --rm --entrypoint="" sunflow bash
 ## Installing locally
 Building pysteps can sometimes fail if a pre-built wheel is not available for your Python version. If the environment variables `CC` and `CXX` are not set, building pysteps falls back to clang, which may only work on Intel-based macOS. To use GNU compilers instead:
 ```shell
-CC=gcc CXX=g++ pdm install
+CC=gcc CXX=g++ uv sync
 ```
