@@ -23,6 +23,7 @@ dependencies = [
     "isodate>=0.7.2",
     "fsspec>=2023.1.0",
     "s3fs>=2023.1.0",
+    "PyYAML>=6.0.2",
 ]
 requires-python = ">=3.12"
 readme = "README.md"
