@@ -1,4 +1,4 @@
-FROM dockerhub.com/python:3.12
+FROM python:3.12
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -14,15 +14,16 @@ RUN apt-get update -y && \
     libhdf5-dev \
     libnetcdf-dev \
     pkg-config \
-    git && \
+    git \
+    curl && \
     rm -rf /var/lib/apt/lists/*
 
 # Set up container environment
 ENV USER_ID=1000
 ENV GROUP_ID=1000
 
-# Install Python package manager
-RUN pip install -U pip setuptools wheel pdm
+# Install uv for fast dependency resolution and installation
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ENV PATH="${PATH}:/root/.local/bin"
 
@@ -32,11 +33,12 @@ WORKDIR /project
 
 # Copy project files
 COPY pyproject.toml /project/
+COPY uv.lock /project/
 COPY sunflow/ /project/sunflow/
 COPY README.md /project/
 COPY config.yaml /project/
 
 # Install project dependencies
-RUN pdm venv create && pdm install
+RUN uv sync --frozen --no-dev
 
-ENTRYPOINT ["pdm", "run", "python", "-m", "sunflow.main"]
+ENTRYPOINT ["uv", "run", "python", "-m", "sunflow.main"]

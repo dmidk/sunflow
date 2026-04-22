@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added pre-commit configuration for linting and formatting [!6](https://github.com/dmidk/sunflow/pull/6), @khintz
+- Add build and publish container workflow [!8](https://github.com/dmidk/sunflow/pull/8), @khintz
 
 ### Changed
 
