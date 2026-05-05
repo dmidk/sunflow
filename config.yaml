@@ -10,12 +10,12 @@ KNMI:
     sds: sds
     sds_cs: sds_cs
   # Required: Filename format for input data files
-  # filename_format: "{dataset_name}_{timestamp}_{bbox_choice}.nc"
+  # filename_format: "{dataset_name}_{timestamp}_{domain_satellite_choice}.nc"
   # Format for PDS data:
   filename_format: "NetCDF4_sds_{pds_timestamp}.nc"
   # Available template variables:
   #   {dataset_name}: Dataset name (e.g., KNMI)
-  #   {bbox_choice}: Bounding box identifier (e.g., NW_EUROPE)
+  #   {domain_satellite_choice}: Satellite domain identifier (e.g., NW_EUROPE_SATELLITE)
   #   {timestamp}: Compact format YYYYMMDDHHMM
   #   {pds_timestamp}: PDS format YYYY-MM-DDTHH_MM_SSZ
   #   {year}: Four-digit year (e.g., 2026)
@@ -33,5 +33,5 @@ DWD:
     sds: SIS
     sds_cs: SISc
   # Required: Filename format for input data files
-  # Supports subdirectories via path separators, e.g.: "{year}/{month}/{day}/{dataset_name}_{timestamp}_{bbox_choice}.nc"
-  filename_format: "{dataset_name}_{timestamp}_{bbox_choice}.nc"
+  # Supports subdirectories via path separators, e.g.: "{year}/{month}/{day}/{dataset_name}_{timestamp}_{domain_satellite_choice}.nc"
+  filename_format: "{dataset_name}_{timestamp}_{domain_satellite_choice}.nc"

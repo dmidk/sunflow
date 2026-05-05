@@ -87,6 +87,7 @@ def simple_advection_forecast(
 
     # Initialize ProbabilisticAdvection with NO noise (alpha=0, beta=0)
     pa = ProbabilisticAdvection(
+        ens_members=1,
         alpha=0.0,  # No Gaussian noise on motion field norm
         beta=0.0,  # No von Mises noise on motion field angle
         return_motion_field=False,
