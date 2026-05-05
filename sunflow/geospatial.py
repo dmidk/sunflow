@@ -7,7 +7,6 @@ import xarray as xr
 
 from .config import DOMAIN_OPTIONS
 
-
 # Tiny absolute tolerance for floating-point boundary comparisons in degrees.
 COVERAGE_ABS_TOL_DEGREES = 1e-9
 

@@ -192,9 +192,7 @@ def parse_arguments() -> argparse.Namespace:
     )
 
     if args.domain_nowcast is None and args.custom_domain_nowcast:
-        parser.error(
-            "--custom_domain_nowcast requires --domain_nowcast=CUSTOM"
-        )
+        parser.error("--custom_domain_nowcast requires --domain_nowcast=CUSTOM")
 
     validate_custom_domain(
         args.domain_nowcast,
@@ -500,12 +498,8 @@ def cli() -> None:
 
     logger.info(f"Running in {run_mode} mode")
     logger.info(f"Using {dataset_name} dataset")
-    logger.info(
-        f"Using satellite domain {domain_satellite_choice}: {domain_satellite}"
-    )
-    logger.info(
-        f"Using nowcast domain {domain_nowcast_choice}: {domain_nowcast}"
-    )
+    logger.info(f"Using satellite domain {domain_satellite_choice}: {domain_satellite}")
+    logger.info(f"Using nowcast domain {domain_nowcast_choice}: {domain_nowcast}")
 
     validate_run_mode(run_mode, dataset_name)
     validate_config(config, dataset_name)
