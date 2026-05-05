@@ -8,6 +8,10 @@ import xarray as xr
 from .config import DOMAIN_OPTIONS
 
 
+# Tiny absolute tolerance for floating-point boundary comparisons in degrees.
+COVERAGE_ABS_TOL_DEGREES = 1e-9
+
+
 def resolve_domain_bbox(
     domain_choice: str,
     custom_domain: str | None = None,
@@ -101,6 +105,38 @@ def get_coordinates(ds: xr.Dataset) -> tuple[np.ndarray, np.ndarray]:
     return latitudes, longitudes
 
 
+def infer_coordinate_edges(coords: np.ndarray) -> tuple[float, float]:
+    """Infer min/max coordinate edges from coordinate center values.
+
+    For regularly gridded coordinates represented by cell centers, this
+    returns the outer cell edges by extending half a grid step beyond the
+    min/max center values.
+
+    Args:
+        coords: 1-D coordinate center values.
+
+    Returns:
+        Tuple (edge_min, edge_max).
+
+    Raises:
+        RuntimeError: If coordinates are empty.
+    """
+    if len(coords) == 0:
+        raise RuntimeError("Coordinate array cannot be empty.")
+
+    coord_min = float(np.min(coords))
+    coord_max = float(np.max(coords))
+
+    # A single coordinate has no resolvable spacing, so edge == center.
+    if len(coords) < 2:
+        return coord_min, coord_max
+
+    # Use median absolute spacing to remain robust to ascending/descending order.
+    spacing = float(np.median(np.abs(np.diff(coords))))
+    half_step = 0.5 * spacing
+    return coord_min - half_step, coord_max + half_step
+
+
 def validate_dataset_covers_domain(
     ds: xr.Dataset,
     domain_bbox: str,
@@ -119,16 +155,14 @@ def validate_dataset_covers_domain(
     latitudes, longitudes = get_coordinates(ds)
     lon_min, lat_min, lon_max, lat_max = parse_bbox(domain_bbox)
 
-    data_lon_min = float(np.min(longitudes))
-    data_lon_max = float(np.max(longitudes))
-    data_lat_min = float(np.min(latitudes))
-    data_lat_max = float(np.max(latitudes))
+    data_lon_min, data_lon_max = infer_coordinate_edges(longitudes)
+    data_lat_min, data_lat_max = infer_coordinate_edges(latitudes)
 
     if (
-        data_lon_min > lon_min
-        or data_lat_min > lat_min
-        or data_lon_max < lon_max
-        or data_lat_max < lat_max
+        data_lon_min > lon_min + COVERAGE_ABS_TOL_DEGREES
+        or data_lat_min > lat_min + COVERAGE_ABS_TOL_DEGREES
+        or data_lon_max < lon_max - COVERAGE_ABS_TOL_DEGREES
+        or data_lat_max < lat_max - COVERAGE_ABS_TOL_DEGREES
     ):
         raise RuntimeError(
             f"{context} does not cover requested domain_satellite={domain_bbox}. "
