@@ -273,7 +273,7 @@ def run_nowcast(
 
     # Simple forecast (ratio forecast)
     ratio_forecast = simple_advection_forecast(
-        ratio_data, motion_field, nowcast_config.future_steps
+        ratio_data, motion_field, nowcast_config.future_steps, ens_members=nowcast_config.ens_members
     )
 
     # Generate previous day time steps for clearsky lookup
