@@ -8,6 +8,7 @@ import xarray as xr
 from loguru import logger
 
 from .data_io import generate_input_filename
+from .geospatial import subset_to_bbox
 
 
 def download_netcdf_knmi(url: str, api_key: str) -> BytesIO:
@@ -65,43 +66,6 @@ def generate_dwd_filename(timestamp: datetime) -> str:
     """
     return f"SISin{timestamp.strftime('%Y%m%d%H%M')}FDv3.nc"
 
-
-def subset_to_bbox(ds: xr.Dataset, bbox: str) -> xr.Dataset:
-    """Subset an xarray Dataset to a geographic bounding box.
-
-    Detects the latitude and longitude coordinate names automatically by
-    matching against common aliases ('lat', 'latitude', 'y' for
-    latitude; 'lon', 'longitude', 'x' for longitude). If coordinates
-    cannot be identified, the original dataset is returned unchanged with
-    a warning.
-
-    Args:
-        ds: Input dataset to subset.
-        bbox: Bounding box string in the format lon_min,lat_min,lon_max,lat_max.
-
-    Returns:
-        Dataset sliced to the requested bounding box, or the original
-        dataset if lat/lon coordinates could not be found.
-    """
-    lon_min, lat_min, lon_max, lat_max = map(float, bbox.split(","))
-
-    lat_coord = lon_coord = None
-    for coord in ds.coords:
-        if coord.lower() in ["lat", "latitude", "y"]:
-            lat_coord = coord
-        elif coord.lower() in ["lon", "longitude", "x"]:
-            lon_coord = coord
-
-    if lat_coord is None or lon_coord is None:
-        logger.warning("Could not find lat/lon coordinates")
-        return ds
-
-    return ds.sel(
-        {
-            lat_coord: slice(lat_min, lat_max),
-            lon_coord: slice(lon_min, lon_max),
-        }
-    )
 
 
 def download_current_data(

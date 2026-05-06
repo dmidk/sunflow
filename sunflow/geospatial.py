@@ -4,8 +4,32 @@ from datetime import datetime
 import numpy as np
 import pvlib
 import xarray as xr
+from loguru import logger
 
 from .config import BBOX_OPTIONS
+
+
+def subset_to_bbox(ds: xr.Dataset, bbox: str) -> xr.Dataset:
+    """Subset an xarray Dataset to a geographic bounding box."""
+    lon_min, lat_min, lon_max, lat_max = map(float, bbox.split(","))
+
+    lat_coord = lon_coord = None
+    for coord in ds.coords:
+        if coord.lower() in ["lat", "latitude", "y"]:
+            lat_coord = coord
+        elif coord.lower() in ["lon", "longitude", "x"]:
+            lon_coord = coord
+
+    if lat_coord is None or lon_coord is None:
+        logger.warning("Could not find lat/lon coordinates for bbox subsetting")
+        return ds
+
+    return ds.sel(
+        {
+            lat_coord: slice(lat_min, lat_max),
+            lon_coord: slice(lon_min, lon_max),
+        }
+    )
 
 
 def get_bbox(bbox_choice: str, custom_bbox: str | None = None) -> str | None:
