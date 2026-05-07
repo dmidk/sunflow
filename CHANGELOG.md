@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added a check for the number of ensemble members, as the code currently supports only one [!13](https://github.com/dmidk/sunflow/pull/13), @KristianHMoller
+
 ## [v1.1.0]
 
 ### Added
