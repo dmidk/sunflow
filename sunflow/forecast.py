@@ -62,10 +62,7 @@ def preprocess_data(
 
 
 def simple_advection_forecast(
-    ratio_data: np.ndarray,
-    motion_field: np.ndarray,
-    n_steps: int,
-    ens_members: int
+    ratio_data: np.ndarray, motion_field: np.ndarray, n_steps: int, ens_members: int
 ) -> np.ndarray:
     """Run a deterministic advection forecast on solar irradiance ratios.
 
