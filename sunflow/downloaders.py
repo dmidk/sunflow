@@ -67,7 +67,6 @@ def generate_dwd_filename(timestamp: datetime) -> str:
     return f"SISin{timestamp.strftime('%Y%m%d%H%M')}FDv3.nc"
 
 
-
 def download_current_data(
     request_time: datetime,
     config: dict[str, Any],
