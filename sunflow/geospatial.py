@@ -24,10 +24,21 @@ def subset_to_bbox(ds: xr.Dataset, bbox: str) -> xr.Dataset:
         logger.warning("Could not find lat/lon coordinates for bbox subsetting")
         return ds
 
+    # Handle potentially inverted coordinates by detecting order
+    lat_values = ds[lat_coord].values
+    lon_values = ds[lon_coord].values
+
+    lat_ascending = lat_values[0] < lat_values[-1]
+    lon_ascending = lon_values[0] < lon_values[-1]
+
+    # Arrange slice bounds based on coordinate order
+    lat_slice = slice(lat_min, lat_max) if lat_ascending else slice(lat_max, lat_min)
+    lon_slice = slice(lon_min, lon_max) if lon_ascending else slice(lon_max, lon_min)
+
     return ds.sel(
         {
-            lat_coord: slice(lat_min, lat_max),
-            lon_coord: slice(lon_min, lon_max),
+            lat_coord: lat_slice,
+            lon_coord: lon_slice,
         }
     )
 

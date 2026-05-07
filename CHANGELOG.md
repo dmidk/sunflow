@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- Subsetting to bounding box is now also done in the `s3` and `files` code paths.
+- Subsetting to bounding box now correctly handles both ascending and descending lat/lon coordinates.
 
 ## [v1.1.0]
 
