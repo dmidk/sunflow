@@ -109,7 +109,7 @@ def download_current_data(
     config: dict[str, Any],
     bbox: str,
     dataset_name: str,
-    bbox_choice: str,
+    domain_satellite_choice: str,
     satellite_data_directory: str,
 ) -> None:
     """Download satellite data for a single timestep and save it to disk.
@@ -129,7 +129,7 @@ def download_current_data(
             base_url, variables, format, crs, and filename_format.
         bbox: Bounding box string lon_min,lat_min,lon_max,lat_max.
         dataset_name: Name of the dataset source (options: KNMI, DWD).
-        bbox_choice: Bounding box identifier used in the output filename.
+        domain_satellite_choice: Satellite domain identifier used in the output filename.
         satellite_data_directory: Directory where the NetCDF file is saved.
     """
     if dataset_name == "KNMI":
@@ -157,7 +157,10 @@ def download_current_data(
     # Save data
     current_time_dt = current_time.astype("datetime64[s]").astype(datetime)
     filename = generate_input_filename(
-        current_time_dt, dataset_name, bbox_choice, config["filename_format"]
+        current_time_dt,
+        dataset_name,
+        domain_satellite_choice,
+        config["filename_format"],
     )
     output_path = os.path.join(satellite_data_directory, filename)
     merged_ds.to_netcdf(output_path)
