@@ -31,6 +31,7 @@ from .validation import (
     validate_clearsky_shapes,
     validate_config,
     validate_data_shape,
+    validate_nowcast_config,
     validate_run_mode,
     verify_environment_variables,
 )
@@ -407,6 +408,7 @@ def cli() -> None:
 
     validate_run_mode(run_mode, dataset_name)
     validate_config(config, dataset_name)
+    validate_nowcast_config(nowcast_config)
     verify_environment_variables(run_mode, dataset_name)
 
     # Determine the time steps to run
