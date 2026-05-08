@@ -38,6 +38,7 @@ from .validation import (
     validate_clearsky_shapes,
     validate_config,
     validate_data_shape,
+    validate_nowcast_config,
     validate_run_mode,
     verify_environment_variables,
 )
@@ -291,6 +292,7 @@ def run_nowcast(
                 nowcast_config.satellite_data_directory,
                 "past data",
                 config["filename_format"],
+                bbox=bbox,
             )
         case "s3":
             data = load_data_from_s3(
@@ -300,6 +302,7 @@ def run_nowcast(
                 s3_config,
                 "past data",
                 config["filename_format"],
+                bbox=bbox,
             )
 
     n_loaded = len(data.time) if "time" in data.coords else 0
@@ -324,7 +327,10 @@ def run_nowcast(
 
     # Simple forecast (ratio forecast)
     ratio_forecast = simple_advection_forecast(
-        ratio_data, motion_field, nowcast_config.future_steps
+        ratio_data,
+        motion_field,
+        nowcast_config.future_steps,
+        ens_members=nowcast_config.ens_members,
     )
 
     # Generate previous day time steps for clearsky lookup
@@ -503,6 +509,7 @@ def cli() -> None:
 
     validate_run_mode(run_mode, dataset_name)
     validate_config(config, dataset_name)
+    validate_nowcast_config(nowcast_config)
     verify_environment_variables(run_mode, dataset_name)
 
     # Determine the time steps to run
