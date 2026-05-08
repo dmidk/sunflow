@@ -11,6 +11,7 @@ from .config import DOMAIN_OPTIONS
 # Tiny absolute tolerance for floating-point boundary comparisons in degrees.
 COVERAGE_ABS_TOL_DEGREES = 1e-9
 
+
 def subset_to_bbox(ds: xr.Dataset, bbox: str) -> xr.Dataset:
     """Subset an xarray Dataset to a geographic bounding box."""
     lon_min, lat_min, lon_max, lat_max = map(float, bbox.split(","))

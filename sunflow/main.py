@@ -292,7 +292,7 @@ def run_nowcast(
                 nowcast_config.satellite_data_directory,
                 "past data",
                 config["filename_format"],
-                bbox=bbox,
+                bbox=domain_satellite,
             )
         case "s3":
             data = load_data_from_s3(
@@ -302,7 +302,7 @@ def run_nowcast(
                 s3_config,
                 "past data",
                 config["filename_format"],
-                bbox=bbox,
+                bbox=domain_satellite,
             )
 
     n_loaded = len(data.time) if "time" in data.coords else 0

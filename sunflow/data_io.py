@@ -11,7 +11,6 @@ import xarray as xr
 from loguru import logger
 
 from .config import NowcastConfig, S3Config
-
 from .geospatial import subset_to_bbox, validate_dataset_covers_domain
 from .validation import DataNotAvailableError
 
