@@ -243,6 +243,7 @@ def run_nowcast(
                 nowcast_config.satellite_data_directory,
                 "past data",
                 config["filename_format"],
+                bbox=bbox,
             )
         case "s3":
             data = load_data_from_s3(
@@ -252,6 +253,7 @@ def run_nowcast(
                 s3_config,
                 "past data",
                 config["filename_format"],
+                bbox=bbox,
             )
 
     n_loaded = len(data.time) if "time" in data.coords else 0
@@ -274,7 +276,10 @@ def run_nowcast(
 
     # Simple forecast (ratio forecast)
     ratio_forecast = simple_advection_forecast(
-        ratio_data, motion_field, nowcast_config.future_steps
+        ratio_data,
+        motion_field,
+        nowcast_config.future_steps,
+        ens_members=nowcast_config.ens_members,
     )
 
     # Generate previous day time steps for clearsky lookup

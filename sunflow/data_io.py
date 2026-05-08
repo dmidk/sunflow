@@ -11,6 +11,7 @@ import xarray as xr
 from loguru import logger
 
 from .config import NowcastConfig, S3Config
+from .geospatial import subset_to_bbox
 from .validation import DataNotAvailableError
 
 
@@ -192,6 +193,7 @@ def load_data_from_files(
     satellite_data_directory: str,
     data_type: str,
     filename_format: str,
+    bbox: str,
 ) -> xr.Dataset:
     """Load time steps from files (operational mode).
 
@@ -232,7 +234,8 @@ def load_data_from_files(
 
     if not collected:
         return xr.Dataset()
-    return xr.concat(collected, dim="time", data_vars=None)
+    ds = xr.concat(collected, dim="time", data_vars=None)
+    return subset_to_bbox(ds, bbox)
 
 
 def check_current_data_existence_s3(
@@ -281,6 +284,7 @@ def load_data_from_s3(
     s3_config: S3Config,
     data_type: str,
     filename_format: str,
+    bbox: str,
 ) -> xr.Dataset:
     """Load time steps from S3.
 
@@ -325,7 +329,8 @@ def load_data_from_s3(
 
     if not collected:
         return xr.Dataset()
-    return xr.concat(collected, dim="time", data_vars=None)
+    ds = xr.concat(collected, dim="time", data_vars=None)
+    return subset_to_bbox(ds, bbox)
 
 
 def fetch_clearsky_with_fallback(
@@ -392,6 +397,7 @@ def fetch_clearsky_with_fallback(
                             nowcast_config.satellite_data_directory,
                             "clearsky data",
                             config["filename_format"],
+                            bbox=bbox,
                         )
                     case "s3":
                         fetched = load_data_from_s3(
@@ -401,6 +407,7 @@ def fetch_clearsky_with_fallback(
                             s3_config,
                             "clearsky data",
                             config["filename_format"],
+                            bbox=bbox,
                         )
 
                 if offset > 0:

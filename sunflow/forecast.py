@@ -62,9 +62,7 @@ def preprocess_data(
 
 
 def simple_advection_forecast(
-    ratio_data: np.ndarray,
-    motion_field: np.ndarray,
-    n_steps: int,
+    ratio_data: np.ndarray, motion_field: np.ndarray, n_steps: int, ens_members: int
 ) -> np.ndarray:
     """Run a deterministic advection forecast on solar irradiance ratios.
 
@@ -90,6 +88,7 @@ def simple_advection_forecast(
         alpha=0.0,  # No Gaussian noise on motion field norm
         beta=0.0,  # No von Mises noise on motion field angle
         return_motion_field=False,
+        ens_members=ens_members,
     )
     # Run probabilistic advection using the correct method name
     forecast = pa.maps_forecast(n_steps, ratio_data, motion_field)
