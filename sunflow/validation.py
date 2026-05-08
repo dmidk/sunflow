@@ -9,6 +9,8 @@ import pandas as pd
 import xarray as xr
 from loguru import logger
 
+from .config import NowcastConfig
+
 
 class MissingClearskyDataError(RuntimeError):
     pass
@@ -40,6 +42,27 @@ def validate_config(config: dict[str, Any], dataset_name: str) -> None:
             f"Missing required key(s) in config for dataset '{dataset_name}': "
             f"{', '.join(missing)}. "
             "Check config.yaml and ensure all required fields are present. Exiting.\n"
+        )
+        sys.exit(1)
+
+
+def validate_nowcast_config(nowcast_config: NowcastConfig) -> None:
+    """Validate that the options selected for the nowcast config are valid.
+
+    Checks the nowcast config created from imported environment variables.
+    Exits immediately for invalid choices.
+
+    Args:
+        nowcast_config: Instance of the NowcastConfig class
+        loaded from environment variables in config.py.
+
+    Raises:
+        SystemExit: If any invalid choice is detected.
+    """
+    if nowcast_config.ens_members != 1:
+        logger.error(
+            f"Invalid nowcast configuration: Currently, only ens_members=1 is supported. "
+            f"Current value: {nowcast_config.ens_members}. Exiting.\n"
         )
         sys.exit(1)
 
