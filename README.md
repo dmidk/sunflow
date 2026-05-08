@@ -134,8 +134,10 @@ podman run -it --rm --entrypoint="" sunflow bash
 ### Arguments
 
 - `--dataset` - Choose between KNMI or DWD data sources
-- `--bbox` - Predefined bounding boxes (DENMARK, NW_EUROPE, CUSTOM)
-- `--custom-bbox` - Custom bounding box (lon_min,lat_min,lon_max,lat_max)
+- `--domain_satellite` - Domain for required satellite input coverage (DENMARK, NW_EUROPE, NW_EUROPE_SATELLITE, CUSTOM)
+- `--custom-domain-satellite` - Custom `domain_satellite` (lon_min,lat_min,lon_max,lat_max)
+- `--domain_nowcast` - Domain written to output (DENMARK, NW_EUROPE, NW_EUROPE_SATELLITE, CUSTOM, defaults to `--domain_satellite`)
+- `--custom-domain-nowcast` - Custom `domain_nowcast` (lon_min,lat_min,lon_max,lat_max)
 - `--time` - Specific time for processing in ISO8601 format
 - `--start-time` - Start of a time range in ISO8601 format (use with `--end-time`)
 - `--end-time` - End of a time range in ISO8601 format, inclusive (use with `--start-time`)
