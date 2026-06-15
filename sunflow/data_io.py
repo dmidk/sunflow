@@ -133,6 +133,7 @@ def generate_input_filename(
         {month}: Two-digit month (e.g. 03)
         {day}: Two-digit day (e.g. 09)
         {hour}: Two-digit hour (e.g. 12)
+        {minute}: Two-digit minute (e.g. 30)
 
     Path separators in the result are supported, so a format like
     ``{year}/{month}/{day}/{dataset_name}_{timestamp}.nc`` resolves to a
@@ -154,6 +155,7 @@ def generate_input_filename(
         month=time_step.strftime("%m"),
         day=time_step.strftime("%d"),
         hour=time_step.strftime("%H"),
+        minute=time_step.strftime("%M"),
     )
     return filename
 
@@ -226,7 +228,15 @@ def load_data_from_files(
 
         try:
             ds = xr.open_dataset(filepath)
-            collected.append(ds.assign_coords(time=[time_step.replace(tzinfo=None)]))
+            time_step_naive = time_step.replace(tzinfo=None)
+
+            # Ensure time is in both dimension and in coords.
+            if "time" in ds.dims:
+                ds = ds.assign_coords(time=[time_step_naive])
+            else:
+                ds = ds.expand_dims(time=[time_step_naive])
+
+            collected.append(ds)
             logger.info(f"Loaded {data_type} from {filepath}")
         except Exception as e:
             logger.error(f"Failed to load {data_type} {filepath}: {e}")

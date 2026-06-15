@@ -2,10 +2,50 @@
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
+import pvlib
 import xarray as xr
 from Models.ProbabilisticAdvection import ProbabilisticAdvection
 
 from .geospatial import get_coordinates
+
+PVLIB_CLEARSKY_VARIABLE_NAME = "pvlib_clearsky_ghi"
+
+
+def make_pvlib_clearsky_dataset(
+    times: list[datetime],
+    latitudes: np.ndarray,
+    longitudes: np.ndarray,
+) -> xr.Dataset:
+    lon_grid, lat_grid = np.meshgrid(longitudes, latitudes)
+    lon_grid = np.where(lon_grid > 180, lon_grid - 360, lon_grid)
+    flat_latitudes = lat_grid.ravel()
+    flat_longitudes = lon_grid.ravel()
+
+    fields = []
+    for time in times:
+        repeated_times = pd.DatetimeIndex([time] * len(flat_latitudes))
+        solar_position = pvlib.solarposition.get_solarposition(
+            repeated_times,
+            flat_latitudes,
+            flat_longitudes,
+        )
+        clearsky = pvlib.clearsky.simplified_solis(solar_position["apparent_elevation"])
+        fields.append(clearsky["ghi"].to_numpy().reshape(lat_grid.shape))
+
+    return xr.Dataset(
+        {
+            PVLIB_CLEARSKY_VARIABLE_NAME: (
+                ["time", "latitude", "longitude"],
+                np.stack(fields),
+            )
+        },
+        coords={
+            "time": [time.replace(tzinfo=None) for time in times],
+            "latitude": latitudes,
+            "longitude": longitudes,
+        },
+    )
 
 
 def preprocess_data(
