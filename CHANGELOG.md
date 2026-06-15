@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+* Made minutes available for formatting file names, @JoachimKoenigslieb
+- use `.expand_dims` instead of `.assign_coords` to make sure we have both time dimension and time coordinates when loading from files, @JoachimKoenigslieb
+- Added a helper `make_pvlib_clearsky_dataset` which creates clearsky data by calling `pvlib`. Also added a new config variable `clearsky_source` which defaults to `file` and switches behavior when set to `pvlib`, @JoachimKoenigslieb
+- `check_solar_elevation` now does not assume location is in Copenhagen by default, @JoachimKoenigslieb
+
 
 ### Added
 
