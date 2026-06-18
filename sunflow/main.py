@@ -220,12 +220,12 @@ def run_nowcast(
     # Check solar elevation
     try:
         lon_min, lat_min, lon_max, lat_max = map(float, bbox.split(","))
-        solar_elevation = check_solar_elevation(
-            time_step,
-            lat=(lat_min + lat_max) / 2,
-            lon=(lon_min + lon_max) / 2,
+        solar_elevation = max(
+            check_solar_elevation(time_step, lat=lat, lon=lon)
+            for lat in (lat_min, lat_max)
+            for lon in (lon_min, lon_max)
         )
-        logger.info(f"Solar elevation: {solar_elevation:.2f} degrees")
+        logger.info(f"Maximum corner solar elevation: {solar_elevation:.2f} degrees")
         if solar_elevation < 1:
             reason = "sun too low"
             logger.warning(f"{reason.capitalize()}. Skipping.\n")
