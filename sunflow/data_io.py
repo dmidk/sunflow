@@ -21,7 +21,7 @@ def fetch_current_data_with_retry(
     config: dict[str, Any],
     domain_satellite: str,
     dataset_name: str,
-    domain_satellite_choice: str,
+    domain_satellite_name: str,
     nowcast_config: NowcastConfig,
     s3_config: S3Config,
     custom_time: bool = False,
@@ -34,7 +34,7 @@ def fetch_current_data_with_retry(
         config: Dataset configuration dict
         domain_satellite: Domain string for required satellite input coverage
         dataset_name: Name of dataset (options: KNMI, DWD)
-        domain_satellite_choice: Domain choice used in input filenames
+        domain_satellite_name: Domain choice used in input filenames
         nowcast_config: NowcastConfig object
         s3_config: S3Config object
         custom_time: Whether a custom time was specified (no retry if True)
@@ -59,14 +59,14 @@ def fetch_current_data_with_retry(
                         config,
                         domain_satellite,
                         dataset_name,
-                        domain_satellite_choice,
+                        domain_satellite_name,
                         nowcast_config.satellite_data_directory,
                     )
                 case "files":
                     check_current_data_existence_file(
                         time_step,
                         dataset_name,
-                        domain_satellite_choice,
+                        domain_satellite_name,
                         nowcast_config.satellite_data_directory,
                         config["filename_format"],
                         domain_satellite,
@@ -75,7 +75,7 @@ def fetch_current_data_with_retry(
                     check_current_data_existence_s3(
                         time_step,
                         dataset_name,
-                        domain_satellite_choice,
+                        domain_satellite_name,
                         s3_config,
                         config["filename_format"],
                         domain_satellite,
@@ -110,7 +110,7 @@ def fetch_current_data_with_retry(
 def generate_input_filename(
     time_step: datetime,
     dataset_name: str,
-    domain_satellite_choice: str,
+    domain_satellite_name: str,
     filename_format: str,
 ) -> str:
     """Generate input filename based on a format template string.
@@ -120,7 +120,7 @@ def generate_input_filename(
     Args:
         time_step: Datetime of the data timestep.
         dataset_name: Name of dataset (options: KNMI, DWD).
-        domain_satellite_choice: Satellite domain identifier.
+        domain_satellite_name: Satellite domain identifier.
         filename_format: Template string from config['filename_format'].
 
     Returns:
@@ -128,7 +128,7 @@ def generate_input_filename(
 
     Template variables supported:
         {dataset_name}: Name of the dataset
-        {domain_satellite_choice}: Satellite domain identifier
+        {domain_satellite_name}: Satellite domain identifier
         {timestamp}: Compact format YYYYMMDDHHMM
         {pds_timestamp}: PDS format YYYY-MM-DDTHH_MM_SSZ
         {year}: Four-digit year (e.g. 2026)
@@ -147,7 +147,7 @@ def generate_input_filename(
     # Substitute template variables
     filename = filename_format.format(
         dataset_name=dataset_name,
-        domain_satellite_choice=domain_satellite_choice,
+        domain_satellite_name=domain_satellite_name,
         timestamp=timestamp_compact,
         pds_timestamp=timestamp_pds,
         year=time_step.strftime("%Y"),
@@ -161,7 +161,7 @@ def generate_input_filename(
 def check_current_data_existence_file(
     request_time: datetime,
     dataset_name: str,
-    domain_satellite_choice: str,
+    domain_satellite_name: str,
     satellite_data_directory: str,
     filename_format: str,
     required_domain: str | None = None,
@@ -171,7 +171,7 @@ def check_current_data_existence_file(
     Args:
         request_time: Python datetime object.
         dataset_name: Name of dataset (options: KNMI, DWD).
-        domain_satellite_choice: Satellite domain identifier.
+        domain_satellite_name: Satellite domain identifier.
         satellite_data_directory: Directory containing data files.
         filename_format: Template string from config['filename_format'].
         required_domain: Optional domain string that must be covered by the file.
@@ -181,7 +181,7 @@ def check_current_data_existence_file(
         RuntimeError: If required_domain is provided and file coverage is insufficient.
     """
     filename = generate_input_filename(
-        request_time, dataset_name, domain_satellite_choice, filename_format
+        request_time, dataset_name, domain_satellite_name, filename_format
     )
     filepath = os.path.join(satellite_data_directory, filename)
     logger.info(f"Checking existence of data at {filepath}")
@@ -200,7 +200,7 @@ def check_current_data_existence_file(
 def load_data_from_files(
     time_steps: list[datetime],
     dataset_name: str,
-    domain_satellite_choice: str,
+    domain_satellite_name: str,
     satellite_data_directory: str,
     data_type: str,
     filename_format: str,
@@ -211,7 +211,7 @@ def load_data_from_files(
     Args:
         time_steps: List of timesteps to load.
         dataset_name: Name of dataset (options: KNMI, DWD).
-        domain_satellite_choice: Satellite domain identifier.
+        domain_satellite_name: Satellite domain identifier.
         satellite_data_directory: Directory containing data files.
         data_type: Type of data for logging (options: past data, clearsky data).
         filename_format: Template string from config['filename_format'].
@@ -226,7 +226,7 @@ def load_data_from_files(
 
     for time_step in time_steps:
         filename = generate_input_filename(
-            time_step, dataset_name, domain_satellite_choice, filename_format
+            time_step, dataset_name, domain_satellite_name, filename_format
         )
         filepath = os.path.join(satellite_data_directory, filename)
 
@@ -252,7 +252,7 @@ def load_data_from_files(
 def check_current_data_existence_s3(
     request_time: datetime,
     dataset_name: str,
-    domain_satellite_choice: str,
+    domain_satellite_name: str,
     s3_config: S3Config,
     filename_format: str,
     required_domain: str | None = None,
@@ -262,7 +262,7 @@ def check_current_data_existence_s3(
     Args:
         request_time: Python datetime object.
         dataset_name: Name of dataset (options: KNMI, DWD).
-        domain_satellite_choice: Satellite domain identifier.
+        domain_satellite_name: Satellite domain identifier.
         s3_config: S3 configuration object.
         filename_format: Template string from config['filename_format'].
         required_domain: Optional domain string that must be covered by the file.
@@ -272,7 +272,7 @@ def check_current_data_existence_s3(
         RuntimeError: If required_domain is provided and file coverage is insufficient.
     """
     filename = generate_input_filename(
-        request_time, dataset_name, domain_satellite_choice, filename_format
+        request_time, dataset_name, domain_satellite_name, filename_format
     )
     s3_path = f"s3://{s3_config.bucket}/{s3_config.input_prefix}/{filename}"
     logger.info(f"Checking existence of data at {s3_path}")
@@ -304,7 +304,7 @@ def check_current_data_existence_s3(
 def load_data_from_s3(
     time_steps: list[datetime],
     dataset_name: str,
-    domain_satellite_choice: str,
+    domain_satellite_name: str,
     s3_config: S3Config,
     data_type: str,
     filename_format: str,
@@ -315,7 +315,7 @@ def load_data_from_s3(
     Args:
         time_steps: List of timesteps to load.
         dataset_name: Name of dataset (options: KNMI, DWD).
-        domain_satellite_choice: Satellite domain identifier.
+        domain_satellite_name: Satellite domain identifier.
         s3_config: S3 configuration object.
         data_type: Type of data for logging (options: past data, clearsky data).
         filename_format: Template string from config['filename_format'].
@@ -334,7 +334,7 @@ def load_data_from_s3(
 
     for time_step in time_steps:
         filename = generate_input_filename(
-            time_step, dataset_name, domain_satellite_choice, filename_format
+            time_step, dataset_name, domain_satellite_name, filename_format
         )
         s3_path = f"s3://{s3_config.bucket}/{s3_config.input_prefix}/{filename}"
 
@@ -364,7 +364,7 @@ def fetch_clearsky_with_fallback(
     config: dict[str, Any],
     bbox: str,
     dataset_name: str,
-    domain_satellite_choice: str,
+    domain_satellite_name: str,
     nowcast_config: NowcastConfig,
     s3_config: S3Config,
 ) -> xr.Dataset:
@@ -382,7 +382,7 @@ def fetch_clearsky_with_fallback(
         config: Dataset configuration dict.
         bbox: Bounding box string.
         dataset_name: Name of dataset (options: KNMI, DWD).
-        domain_satellite_choice: Satellite domain identifier.
+        domain_satellite_name: Satellite domain identifier.
         nowcast_config: NowcastConfig object.
         s3_config: S3Config object.
 
@@ -417,7 +417,7 @@ def fetch_clearsky_with_fallback(
                         fetched = load_data_from_files(
                             [source_time],
                             dataset_name,
-                            domain_satellite_choice,
+                            domain_satellite_name,
                             nowcast_config.satellite_data_directory,
                             "clearsky data",
                             config["filename_format"],
@@ -427,7 +427,7 @@ def fetch_clearsky_with_fallback(
                         fetched = load_data_from_s3(
                             [source_time],
                             dataset_name,
-                            domain_satellite_choice,
+                            domain_satellite_name,
                             s3_config,
                             "clearsky data",
                             config["filename_format"],

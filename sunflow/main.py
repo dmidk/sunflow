@@ -212,7 +212,7 @@ def run_nowcast(
     domain_satellite: str,
     domain_nowcast: str,
     dataset_name: str,
-    domain_satellite_choice: str,
+    domain_satellite_name: str,
     nowcast_config: NowcastConfig,
     s3_config: S3Config,
     custom_time: bool = True,
@@ -226,7 +226,7 @@ def run_nowcast(
         domain_satellite: Domain string used for satellite input coverage.
         domain_nowcast: Domain string used for output cropping.
         dataset_name: Name of dataset.
-        domain_satellite_choice: Domain identifier used for input filenames.
+        domain_satellite_name: Domain identifier used for input filenames.
         nowcast_config: NowcastConfig object.
         s3_config: S3Config object.
         custom_time: If True, skip the retry wait loop on missing data.
@@ -245,7 +245,7 @@ def run_nowcast(
         config,
         domain_satellite,
         dataset_name,
-        domain_satellite_choice,
+        domain_satellite_name,
         nowcast_config,
         s3_config,
         custom_time=custom_time,
@@ -288,7 +288,7 @@ def run_nowcast(
             data = load_data_from_files(
                 past_time_steps,
                 dataset_name,
-                domain_satellite_choice,
+                domain_satellite_name,
                 nowcast_config.satellite_data_directory,
                 "past data",
                 config["filename_format"],
@@ -298,7 +298,7 @@ def run_nowcast(
             data = load_data_from_s3(
                 past_time_steps,
                 dataset_name,
-                domain_satellite_choice,
+                domain_satellite_name,
                 s3_config,
                 "past data",
                 config["filename_format"],
@@ -354,7 +354,7 @@ def run_nowcast(
         config,
         domain_satellite,
         dataset_name,
-        domain_satellite_choice,
+        domain_satellite_name,
         nowcast_config,
         s3_config,
     )
@@ -464,9 +464,9 @@ def cli() -> None:
 
     run_mode = args.run_mode
     dataset_name = args.dataset
-    domain_satellite_choice = args.domain_satellite
+    domain_satellite_name = args.domain_satellite
     domain_satellite = resolve_domain_bbox(
-        domain_satellite_choice,
+        domain_satellite_name,
         args.custom_domain_satellite,
     )
     if domain_satellite is None:
@@ -477,7 +477,7 @@ def cli() -> None:
 
     domain_nowcast_choice = args.domain_nowcast
     if domain_nowcast_choice is None:
-        domain_nowcast_choice = domain_satellite_choice
+        domain_nowcast_choice = domain_satellite_name
         domain_nowcast = domain_satellite
     else:
         domain_nowcast = resolve_domain_bbox(
@@ -504,7 +504,7 @@ def cli() -> None:
 
     logger.info(f"Running in {run_mode} mode")
     logger.info(f"Using {dataset_name} dataset")
-    logger.info(f"Using satellite domain {domain_satellite_choice}: {domain_satellite}")
+    logger.info(f"Using satellite domain {domain_satellite_name}: {domain_satellite}")
     logger.info(f"Using nowcast domain {domain_nowcast_choice}: {domain_nowcast}")
 
     validate_run_mode(run_mode, dataset_name)
@@ -558,7 +558,7 @@ def cli() -> None:
                 domain_satellite,
                 domain_nowcast,
                 dataset_name,
-                domain_satellite_choice,
+                domain_satellite_name,
                 nowcast_config,
                 s3_config,
                 custom_time=custom_time,
