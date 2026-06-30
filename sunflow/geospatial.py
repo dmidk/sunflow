@@ -6,10 +6,7 @@ import pvlib
 import xarray as xr
 from loguru import logger
 
-from .config import DOMAIN_OPTIONS
-
-# Tiny absolute tolerance for floating-point boundary comparisons in degrees.
-COVERAGE_ABS_TOL_DEGREES = 1e-9
+from .config import DOMAIN_OPTIONS, COVERAGE_ABS_TOL_DEGREES
 
 
 def subset_to_bbox(ds: xr.Dataset, bbox: str) -> xr.Dataset:
@@ -52,11 +49,11 @@ def resolve_domain_bbox(
 ) -> str | None:
     """Return the bbox string for a given domain choice.
 
-    For predefined choices ('DENMARK', 'NW_EUROPE'), looks up the value in
+    For predefined choices ('DENMARK', 'NW_EUROPE', 'NW_EUROPE_SATELLITE'), looks up the value in
     DOMAIN_OPTIONS. For 'CUSTOM', returns custom_domain directly.
 
     Args:
-        domain_choice: One of 'DENMARK', 'NW_EUROPE', or 'CUSTOM'.
+        domain_choice: One of 'DENMARK', 'NW_EUROPE', 'NW_EUROPE_SATELLITE', or 'CUSTOM'.
         custom_domain: Bbox string lon_min,lat_min,lon_max,lat_max used
             when domain_choice='CUSTOM'.
 
