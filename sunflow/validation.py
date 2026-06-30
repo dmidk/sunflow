@@ -14,7 +14,6 @@ from .config import NowcastConfig
 from .geospatial import parse_bbox
 
 
-
 class MissingClearskyDataError(RuntimeError):
     pass
 

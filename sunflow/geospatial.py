@@ -6,7 +6,7 @@ import pvlib
 import xarray as xr
 from loguru import logger
 
-from .config import DOMAIN_OPTIONS, COVERAGE_ABS_TOL_DEGREES
+from .config import COVERAGE_ABS_TOL_DEGREES, DOMAIN_OPTIONS
 
 
 def subset_to_bbox(ds: xr.Dataset, bbox: str) -> xr.Dataset:
@@ -49,8 +49,8 @@ def resolve_domain_bbox(
 ) -> str | None:
     """Return the bbox string for a given domain choice.
 
-    For predefined choices ('DENMARK', 'NW_EUROPE', 'NW_EUROPE_SATELLITE'), looks up the value in
-    DOMAIN_OPTIONS. For 'CUSTOM', returns custom_domain directly.
+    For predefined choices ('DENMARK', 'NW_EUROPE', 'NW_EUROPE_SATELLITE'),
+    looks up the value in DOMAIN_OPTIONS. For 'CUSTOM', returns custom_domain directly.
 
     Args:
         domain_choice: One of 'DENMARK', 'NW_EUROPE', 'NW_EUROPE_SATELLITE', or 'CUSTOM'.

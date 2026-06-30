@@ -15,6 +15,7 @@ DOMAIN_OPTIONS: dict[str, str | None] = {
 # Tiny absolute tolerance for floating-point boundary comparisons in degrees.
 COVERAGE_ABS_TOL_DEGREES = 1e-9
 
+
 @dataclass
 class S3Config:
     """S3 storage configuration."""
