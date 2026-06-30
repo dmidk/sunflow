@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added support for using a different, smaller output domain than the satellite input domain [!10](https://github.com/dmidk/sunflow/pull/10), @KristianHMoller
 - Added a check for the number of ensemble members, as the code currently supports only one [!13](https://github.com/dmidk/sunflow/pull/13), @KristianHMoller
 - Subsetting to bounding box is now also done in the `s3` and `files` code paths [!11](https://github.com/dmidk/sunflow/pull/11), @JoachimKoenigslieb
 - Subsetting to bounding box now correctly handles both ascending and descending lat/lon coordinates [!11](https://github.com/dmidk/sunflow/pull/11), @JoachimKoenigslieb
