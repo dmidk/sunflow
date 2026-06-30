@@ -27,13 +27,13 @@ from .geospatial import (
     check_solar_elevation,
     crop_forecast_to_domain,
     domain_contains,
-    parse_bbox,
     resolve_domain_bbox,
     validate_dataset_covers_domain,
 )
 from .time_handler import generate_time_steps, round_time
 from .validation import (
     MissingClearskyDataError,
+    validate_custom_domain,
     validate_clearsky_completeness,
     validate_clearsky_shapes,
     validate_config,
@@ -59,6 +59,7 @@ class RunResult:
 
 # Model version
 model_version = __version__
+
 DOMAIN_CHOICES = tuple(DOMAIN_OPTIONS)
 
 
@@ -166,26 +167,8 @@ def parse_arguments() -> argparse.Namespace:
     if args.start_time and args.end_time and args.start_time > args.end_time:
         parser.error("--start_time must be before --end_time")
 
-    def validate_custom_domain(
-        domain_choice: str | None,
-        custom_domain: str | None,
-        domain_arg: str,
-        custom_arg: str,
-    ) -> None:
-        if domain_choice == "CUSTOM":
-            if not custom_domain:
-                parser.error(f"{custom_arg} is required when {domain_arg}=CUSTOM")
-            try:
-                parse_bbox(custom_domain)
-            except ValueError as e:
-                parser.error(
-                    f"Invalid {custom_arg} format: {e}. "
-                    "Use format 'lon_min,lat_min,lon_max,lat_max'"
-                )
-        elif custom_domain:
-            parser.error(f"{custom_arg} is only valid when {domain_arg}=CUSTOM")
-
     validate_custom_domain(
+        parser,
         args.domain_satellite,
         args.custom_domain_satellite,
         "--domain_satellite",
@@ -196,6 +179,7 @@ def parse_arguments() -> argparse.Namespace:
         parser.error("--custom_domain_nowcast requires --domain_nowcast=CUSTOM")
 
     validate_custom_domain(
+        parser,
         args.domain_nowcast,
         args.custom_domain_nowcast,
         "--domain_nowcast",

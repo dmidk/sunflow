@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import os
 import sys
 from datetime import datetime
@@ -10,6 +11,8 @@ import xarray as xr
 from loguru import logger
 
 from .config import NowcastConfig
+from .geospatial import parse_bbox
+
 
 
 class MissingClearskyDataError(RuntimeError):
@@ -18,6 +21,27 @@ class MissingClearskyDataError(RuntimeError):
 
 class DataNotAvailableError(RuntimeError):
     pass
+
+
+def validate_custom_domain(
+    parser: argparse.ArgumentParser,
+    domain_choice: str | None,
+    custom_domain: str | None,
+    domain_arg: str,
+    custom_arg: str,
+) -> None:
+    if domain_choice == "CUSTOM":
+        if not custom_domain:
+            parser.error(f"{custom_arg} is required when {domain_arg}=CUSTOM")
+        try:
+            parse_bbox(custom_domain)
+        except ValueError as e:
+            parser.error(
+                f"Invalid {custom_arg} format: {e}. "
+                "Use format 'lon_min,lat_min,lon_max,lat_max'"
+            )
+    elif custom_domain:
+        parser.error(f"{custom_arg} is only valid when {domain_arg}=CUSTOM")
 
 
 def validate_config(config: dict[str, Any], dataset_name: str) -> None:
