@@ -459,13 +459,13 @@ def cli() -> None:
             "Use a predefined choice or provide --custom_domain_satellite."
         )
 
-    domain_nowcast_choice = args.domain_nowcast
-    if domain_nowcast_choice is None:
-        domain_nowcast_choice = domain_satellite_name
+    domain_nowcast_name = args.domain_nowcast
+    if domain_nowcast_name is None:
+        domain_nowcast_name = domain_satellite_name
         domain_nowcast = domain_satellite
     else:
         domain_nowcast = resolve_domain_bbox(
-            domain_nowcast_choice,
+            domain_nowcast_name,
             args.custom_domain_nowcast,
         )
         if domain_nowcast is None:
@@ -489,7 +489,7 @@ def cli() -> None:
     logger.info(f"Running in {run_mode} mode")
     logger.info(f"Using {dataset_name} dataset")
     logger.info(f"Using satellite domain {domain_satellite_name}: {domain_satellite}")
-    logger.info(f"Using nowcast domain {domain_nowcast_choice}: {domain_nowcast}")
+    logger.info(f"Using nowcast domain {domain_nowcast_name}: {domain_nowcast}")
 
     validate_run_mode(run_mode, dataset_name)
     validate_config(config, dataset_name)
