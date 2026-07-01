@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 import isodate
+import numpy as np
 import yaml
 from loguru import logger
 from pysteps.motion.lucaskanade import dense_lucaskanade
@@ -136,6 +137,14 @@ def parse_arguments() -> argparse.Namespace:
         help="End of time span in ISO8601 format (inclusive). Use with --start-time.",
         default=None,
     )
+    parser.add_argument(
+        "--full_ensemble",
+        action="store_true",
+        help=(
+            "Save full ensemble output. By default, the pixel-wise median across "
+            "ensemble members is saved."
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -175,6 +184,7 @@ def run_nowcast(
     bbox_choice: str,
     nowcast_config: NowcastConfig,
     s3_config: S3Config,
+    full_ensemble: bool = False,
     custom_time: bool = True,
 ) -> RunResult:
     """Run a single nowcast for the given (already-rounded) time step.
@@ -188,6 +198,8 @@ def run_nowcast(
         bbox_choice: Bounding box identifier.
         nowcast_config: NowcastConfig object.
         s3_config: S3Config object.
+        full_ensemble: If True, save all ensemble members. If False,
+            save pixel-wise median over ensemble members.
         custom_time: If True, skip the retry wait loop on missing data.
 
     Returns:
@@ -340,9 +352,29 @@ def run_nowcast(
         clearsky_data, ratio_data, solar_forecast, config, clearsky_t0_time
     )
 
+    if full_ensemble:
+        output_forecast = solar_forecast
+        output_mode = "full_ensemble"
+        logger.info("Saving full ensemble forecast")
+    else:
+        if solar_forecast.shape[0] == 1:
+            output_forecast = solar_forecast
+            output_mode = "deterministic"
+            logger.info(
+                "Saving deterministic forecast "
+                "(single ensemble member, kept as singleton ensemble dimension)"
+            )
+        else:
+            output_forecast = np.median(solar_forecast, axis=0, keepdims=True)
+            output_mode = "median"
+            logger.info(
+                "Saving pixel-wise median forecast across ensemble members "
+                "(with singleton ensemble dimension)"
+            )
+
     # Save forecast (now contains actual solar irradiance, not ratios)
     filename = save_forecast(
-        solar_forecast,
+        output_forecast,
         time_step,
         nowcast_config.future_steps + 1,  # +1 for the t=0 analysis step
         latitudes,
@@ -350,6 +382,7 @@ def run_nowcast(
         dataset_name,
         nowcast_config,
         model_version,
+        output_mode,
         run_mode,
         s3_config,
     )
@@ -412,6 +445,13 @@ def cli() -> None:
     logger.info(f"Running in {run_mode} mode")
     logger.info(f"Using {dataset_name} dataset")
     logger.info(f"Using {bbox_choice} bbox: {bbox}")
+    logger.info(f"Number of ensemble members: {nowcast_config.ens_members}")
+    if args.full_ensemble:
+        logger.info("Output mode: full ensemble")
+    elif nowcast_config.ens_members == 1:
+        logger.info("Output mode: deterministic")
+    else:
+        logger.info("Output mode: median")
     logger.info(
         f"Using probabilistic advection noise parameters alpha={nowcast_config.alpha}, "
         f"beta={nowcast_config.beta}"
@@ -479,6 +519,7 @@ def cli() -> None:
                 bbox_choice,
                 nowcast_config,
                 s3_config,
+                full_ensemble=args.full_ensemble,
                 custom_time=custom_time,
             )
             results.append(result)
