@@ -46,27 +46,6 @@ def validate_config(config: dict[str, Any], dataset_name: str) -> None:
         sys.exit(1)
 
 
-def validate_nowcast_config(nowcast_config: NowcastConfig) -> None:
-    """Validate that the options selected for the nowcast config are valid.
-
-    Checks the nowcast config created from imported environment variables.
-    Exits immediately for invalid choices.
-
-    Args:
-        nowcast_config: Instance of the NowcastConfig class
-        loaded from environment variables in config.py.
-
-    Raises:
-        SystemExit: If any invalid choice is detected.
-    """
-    if nowcast_config.ens_members != 1:
-        logger.error(
-            f"Invalid nowcast configuration: Currently, only ens_members=1 is supported. "
-            f"Current value: {nowcast_config.ens_members}. Exiting.\n"
-        )
-        sys.exit(1)
-
-
 def validate_run_mode(run_mode: str, dataset_name: str) -> None:
     """Validate that the run mode is compatible with the dataset.
 
