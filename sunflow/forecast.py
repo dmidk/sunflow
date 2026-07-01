@@ -4,7 +4,6 @@ from datetime import datetime
 import numpy as np
 import xarray as xr
 from Models.ProbabilisticAdvection import ProbabilisticAdvection
-from loguru import logger
 
 from .geospatial import get_coordinates
 
@@ -62,16 +61,19 @@ def preprocess_data(
     )
 
 
-def simple_advection_forecast(
-    ratio_data: np.ndarray, motion_field: np.ndarray, n_steps: int, ens_members: int
+def probabilistic_advection_forecast(
+    ratio_data: np.ndarray,
+    motion_field: np.ndarray,
+    n_steps: int,
+    ens_members: int,
+    alpha: float,
+    beta: float,
 ) -> np.ndarray:
-    """Run a deterministic advection forecast on solar irradiance ratios.
+    """Run a probabilistic advection forecast on solar irradiance ratios.
 
-    Uses ProbabilisticAdvection with noise parameters alpha=0 and beta=0,
-    which disables Gaussian noise on the motion field norm and
-    von Mises noise on the direction, yielding a purely deterministic
-    advection result. The ensemble dimension added by the model is removed
-    before returning.
+    Uses ProbabilisticAdvection with configurable noise parameters:
+    alpha controls Gaussian noise on motion field norm and beta controls
+    von Mises noise on motion field direction.
 
     Args:
         ratio_data: Input array of shape (time, lat, lon) containing
@@ -79,15 +81,18 @@ def simple_advection_forecast(
         motion_field: Optical flow field of shape (2, lat, lon) as
             produced by dense_lucaskanade.
         n_steps: Number of forecast timesteps to produce.
+        ens_members: Number of ensemble members.
+        alpha: Gaussian noise strength on motion field norm.
+        beta: von Mises noise strength on motion field angle.
 
     Returns:
         Forecast array of shape (n_steps, lat, lon).
     """
 
-    # Initialize ProbabilisticAdvection with NO noise (alpha=0, beta=0)
+    # Initialize ProbabilisticAdvection with configured noise settings.
     pa = ProbabilisticAdvection(
-        alpha=0.0,  # No Gaussian noise on motion field norm
-        beta=0.0,  # No von Mises noise on motion field angle
+        alpha=alpha,
+        beta=beta,
         return_motion_field=False,
         ens_members=ens_members,
     )
@@ -149,7 +154,8 @@ def multiply_clearsky(
                 "ratio_forecast time dimension does not match clearsky timesteps "
                 f"({ratio_forecast.shape[0]} != {clearsky_stack.shape[0]})."
             )
-        return ratio_forecast * clearsky_stack
+        solar_forecast = ratio_forecast * clearsky_stack
+        return solar_forecast[np.newaxis, :, :, :]  # Add ensemble dimension for consistency
 
     if ratio_forecast.ndim == 4:
         if ratio_forecast.shape[1] != clearsky_stack.shape[0]:
@@ -165,31 +171,47 @@ def multiply_clearsky(
     )
 
 
-def prepend_t0(clearsky_data: xr.Dataset, ratio_data: np.ndarray, solar_forecast: np.ndarray, config: dict, clearsky_t0_time: datetime) -> np.ndarray:
+def prepend_t0(
+    clearsky_data: xr.Dataset,
+    ratio_data: np.ndarray,
+    solar_forecast: np.ndarray,
+    config: dict,
+    clearsky_t0_time: datetime,
+) -> np.ndarray:
+    """Prepend analysis timestep (t=0) to an ensemble solar forecast.
+
+    Computes the t=0 solar field as the latest observed ratio
+    (ratio_data[-1]) multiplied by clearsky irradiance at clearsky_t0_time,
+    then prepends that field to all ensemble members in solar_forecast.
+
+    Args:
+        clearsky_data: Dataset containing clearsky irradiance values on
+            a time axis.
+        ratio_data: Ratio history array with shape (time, lat, lon).
+        solar_forecast: Forecast array with shape
+            (ensemble, forecast_time, lat, lon).
+        config: Runtime configuration dict containing
+            config["nc_variable_names"]["sds_cs"].
+        clearsky_t0_time: Timestamp for the analysis clearsky field,
+            typically one day before the nowcast time.
+
+    Returns:
+        Array of shape (ensemble, forecast_time + 1, lat, lon)
+        with the analysis field inserted at index 0 along the time axis.
+    """
     # Prepend timestep 0: current observation (ratio_data[-1]) × clearsky at t=0
     sds_cs_t0 = clearsky_data.sel(time=clearsky_t0_time.replace(tzinfo=None))[
         config["nc_variable_names"]["sds_cs"]
     ].values
     solar_t0 = ratio_data[-1] * sds_cs_t0
 
-    if solar_forecast.ndim == 3:
-        solar_forecast = np.concatenate(
-            [solar_t0[np.newaxis, :, :], solar_forecast],
-            axis=0,
-        )
-    elif solar_forecast.ndim == 4:
-        # Broadcast the same t=0 clearsky-based analysis field to all ensembles.
-        solar_t0_ens = np.broadcast_to(
-            solar_t0,
-            (solar_forecast.shape[0],) + solar_t0.shape,
-        )
-        solar_forecast = np.concatenate(
-            [solar_t0_ens[:, np.newaxis, :, :], solar_forecast],
-            axis=1,
-        )
-    else:
-        raise ValueError(
-            "solar_forecast must have shape (time, lat, lon) or "
-            "(ensemble, time, lat, lon)."
-        )
+    # Broadcast the same t=0 clearsky-based analysis field to all ensembles.
+    solar_t0_ens = np.broadcast_to(
+        solar_t0,
+        (solar_forecast.shape[0],) + solar_t0.shape,
+    )
+    solar_forecast = np.concatenate(
+        [solar_t0_ens[:, np.newaxis, :, :], solar_forecast],
+        axis=1,
+    )
     return solar_forecast

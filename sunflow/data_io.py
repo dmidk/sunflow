@@ -473,10 +473,6 @@ def save_forecast(
     ens_members = nowcast_config.ens_members
     filename = f"SolarNowcast_{time_step.strftime('%Y%m%d%H%M')}.nc"
 
-    # Add ensemble dimension if needed (forecast should be [ensemble, time, lat, lon])
-    if forecast.ndim == 3:
-        forecast = forecast[np.newaxis, :, :, :]  # Now [1, time, lat, lon]
-
     # Build time coordinate (CF-convention: minutes since forecast reference time)
 
     time_step_naive = time_step.replace(tzinfo=None)

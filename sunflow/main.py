@@ -22,7 +22,7 @@ from .data_io import (
     save_forecast,
 )
 from .downloaders import download_past_data
-from .forecast import multiply_clearsky, preprocess_data, simple_advection_forecast, prepend_t0
+from .forecast import multiply_clearsky, preprocess_data, probabilistic_advection_forecast, prepend_t0
 from .geospatial import check_solar_elevation, get_bbox
 from .time_handler import generate_time_steps, round_time
 from .validation import (
@@ -31,7 +31,6 @@ from .validation import (
     validate_clearsky_shapes,
     validate_config,
     validate_data_shape,
-    validate_nowcast_config,
     validate_run_mode,
     verify_environment_variables,
 )
@@ -274,12 +273,14 @@ def run_nowcast(
     # Compute motion field
     motion_field = dense_lucaskanade(ratio_data)
 
-    # Simple forecast (ratio forecast)
-    ratio_forecast = simple_advection_forecast(
+    # Probabilistic advection forecast (ratio forecast)
+    ratio_forecast = probabilistic_advection_forecast(
         ratio_data,
         motion_field,
         nowcast_config.future_steps,
         ens_members=nowcast_config.ens_members,
+        alpha=nowcast_config.alpha,
+        beta=nowcast_config.beta,
     )
 
     # Generate previous day time steps for clearsky lookup
@@ -405,6 +406,20 @@ def cli() -> None:
     logger.info(f"Running in {run_mode} mode")
     logger.info(f"Using {dataset_name} dataset")
     logger.info(f"Using {bbox_choice} bbox: {bbox}")
+    logger.info(
+        f"Using probabilistic advection noise parameters alpha={nowcast_config.alpha}, "
+        f"beta={nowcast_config.beta}"
+    )
+
+    if nowcast_config.ens_members == 1 and (
+        nowcast_config.alpha != 0.0 or nowcast_config.beta != 0.0
+    ):
+        logger.warning(
+            "Running with a single ensemble member, but non-zero probabilistic advection noise " \
+            "parameters alpha and/or beta. This is generally not recommended as it " \
+            "simply adds noise to the nowcast without providing any ensemble spread. " \
+            "Consider setting alpha=0.0 and beta=0.0 for a single-member run."
+        )
 
     validate_run_mode(run_mode, dataset_name)
     validate_config(config, dataset_name)
