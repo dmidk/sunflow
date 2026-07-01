@@ -75,13 +75,13 @@ class NowcastConfig:
         """
 
         ens_members = int(os.getenv("ENS_MEMBERS", "1"))
-        # Reference for default noise values: 
+        # Reference for default noise values:
         # A. Carpentieri, D. Folini, D. Nerini, S. Pulkkinen, M. Wild, A. Meyer,
-        # "Intraday probabilistic forecasts of surface solar radiation with cloud scale-dependent autoregressive advection,"
+        # "Intraday probabilistic forecasts of surface solar radiation with cloud
+        # scale-dependent autoregressive advection,"
         # Applied Energy, Volume 351, 2023
         default_alpha = 0.0 if ens_members == 1 else 9.29
         default_beta = 0.0 if ens_members == 1 else 0.17
-
 
         return cls(
             nowcast_directory=os.getenv("NOWCAST_DIRECTORY", "."),

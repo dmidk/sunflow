@@ -155,7 +155,9 @@ def multiply_clearsky(
                 f"({ratio_forecast.shape[0]} != {clearsky_stack.shape[0]})."
             )
         solar_forecast = ratio_forecast * clearsky_stack
-        return solar_forecast[np.newaxis, :, :, :]  # Add ensemble dimension for consistency
+        return solar_forecast[
+            np.newaxis, :, :, :
+        ]  # Add ensemble dimension for consistency
 
     if ratio_forecast.ndim == 4:
         if ratio_forecast.shape[1] != clearsky_stack.shape[0]:

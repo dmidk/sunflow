@@ -9,8 +9,6 @@ import pandas as pd
 import xarray as xr
 from loguru import logger
 
-from .config import NowcastConfig
-
 
 class MissingClearskyDataError(RuntimeError):
     pass

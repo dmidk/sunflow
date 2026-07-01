@@ -7,7 +7,6 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 import isodate
-import numpy as np
 import yaml
 from loguru import logger
 from pysteps.motion.lucaskanade import dense_lucaskanade
@@ -22,7 +21,12 @@ from .data_io import (
     save_forecast,
 )
 from .downloaders import download_past_data
-from .forecast import multiply_clearsky, preprocess_data, probabilistic_advection_forecast, prepend_t0
+from .forecast import (
+    multiply_clearsky,
+    prepend_t0,
+    preprocess_data,
+    probabilistic_advection_forecast,
+)
 from .geospatial import check_solar_elevation, get_bbox
 from .time_handler import generate_time_steps, round_time
 from .validation import (
@@ -332,7 +336,9 @@ def run_nowcast(
         config["nc_variable_names"],
     )
 
-    solar_forecast = prepend_t0(clearsky_data, ratio_data, solar_forecast, config, clearsky_t0_time)
+    solar_forecast = prepend_t0(
+        clearsky_data, ratio_data, solar_forecast, config, clearsky_t0_time
+    )
 
     # Save forecast (now contains actual solar irradiance, not ratios)
     filename = save_forecast(
@@ -415,9 +421,9 @@ def cli() -> None:
         nowcast_config.alpha != 0.0 or nowcast_config.beta != 0.0
     ):
         logger.warning(
-            "Running with a single ensemble member, but non-zero probabilistic advection noise " \
-            "parameters alpha and/or beta. This is generally not recommended as it " \
-            "simply adds noise to the nowcast without providing any ensemble spread. " \
+            "Running with a single ensemble member, but non-zero probabilistic advection"
+            "noise parameters alpha and/or beta. This is generally not recommended as it"
+            "simply adds noise to the nowcast without providing any ensemble spread. "
             "Consider setting alpha=0.0 and beta=0.0 for a single-member run."
         )
 
