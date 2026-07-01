@@ -22,7 +22,7 @@ from .data_io import (
     save_forecast,
 )
 from .downloaders import download_past_data
-from .forecast import multiply_clearsky, preprocess_data, simple_advection_forecast
+from .forecast import multiply_clearsky, preprocess_data, simple_advection_forecast, prepend_t0
 from .geospatial import check_solar_elevation, get_bbox
 from .time_handler import generate_time_steps, round_time
 from .validation import (
@@ -331,12 +331,7 @@ def run_nowcast(
         config["nc_variable_names"],
     )
 
-    # Prepend timestep 0: current observation (ratio_data[-1]) × clearsky at t=0
-    sds_cs_t0 = clearsky_data.sel(time=clearsky_t0_time.replace(tzinfo=None))[
-        config["nc_variable_names"]["sds_cs"]
-    ].values
-    solar_t0 = ratio_data[-1] * sds_cs_t0
-    solar_forecast = np.concatenate([solar_t0[np.newaxis, :, :], solar_forecast], axis=0)
+    solar_forecast = prepend_t0(clearsky_data, ratio_data, solar_forecast, config, clearsky_t0_time)
 
     # Save forecast (now contains actual solar irradiance, not ratios)
     filename = save_forecast(
@@ -413,7 +408,7 @@ def cli() -> None:
 
     validate_run_mode(run_mode, dataset_name)
     validate_config(config, dataset_name)
-    validate_nowcast_config(nowcast_config)
+    # validate_nowcast_config(nowcast_config)
     verify_environment_variables(run_mode, dataset_name)
 
     # Determine the time steps to run

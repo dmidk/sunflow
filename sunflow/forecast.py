@@ -4,6 +4,7 @@ from datetime import datetime
 import numpy as np
 import xarray as xr
 from Models.ProbabilisticAdvection import ProbabilisticAdvection
+from loguru import logger
 
 from .geospatial import get_coordinates
 
@@ -93,10 +94,6 @@ def simple_advection_forecast(
     # Run probabilistic advection using the correct method name
     forecast = pa.maps_forecast(n_steps, ratio_data, motion_field)
 
-    # Remove ensemble dimension if present (squeeze to get shape: [time, lat, lon])
-    if forecast.ndim == 4:  # [ensemble, time, lat, lon]
-        forecast = forecast[0]  # Take first (and only) ensemble member
-
     return forecast
 
 
@@ -115,7 +112,7 @@ def multiply_clearsky(
 
     Args:
         ratio_forecast: Forecast array of shape (n_steps, lat, lon)
-            containing SDS/SDS_CS ratios.
+            or (ensemble, n_steps, lat, lon) containing SDS/SDS_CS ratios.
         clearsky_data: xarray Dataset with a 'time' dimension containing
             the clearsky variable for each forecast step.
         previous_day_time_steps: List of datetimes (one per forecast step)
@@ -124,26 +121,75 @@ def multiply_clearsky(
             NetCDF variable name in the datasets.
 
     Returns:
-        Solar irradiance forecast array of shape (n_steps, lat, lon)
-        in W m⁻².
+        Solar irradiance forecast array with the same shape as
+        ratio_forecast, in W m⁻².
 
     Raises:
         RuntimeError: If clearsky data is missing for any forecast timestep.
     """
-    solar_forecast = np.zeros_like(ratio_forecast)
+    clearsky_steps: list[np.ndarray] = []
 
-    for i, time_step in enumerate(previous_day_time_steps):
+    for time_step in previous_day_time_steps:
         try:
             sds_cs = clearsky_data.sel(time=time_step.replace(tzinfo=None))[
                 nc_variable_names["sds_cs"]
             ].values
-
-            # Multiply ratio by clearsky
-            solar_forecast[i] = ratio_forecast[i] * sds_cs
+            clearsky_steps.append(sds_cs)
         except KeyError:
             raise RuntimeError(
                 f"No clearsky data for {time_step.strftime('%Y-%m-%dT%H:%M:%SZ')}, "
                 "cannot compute solar forecast for this step."
             )
 
+    clearsky_stack = np.stack(clearsky_steps, axis=0)
+
+    if ratio_forecast.ndim == 3:
+        if ratio_forecast.shape[0] != clearsky_stack.shape[0]:
+            raise ValueError(
+                "ratio_forecast time dimension does not match clearsky timesteps "
+                f"({ratio_forecast.shape[0]} != {clearsky_stack.shape[0]})."
+            )
+        return ratio_forecast * clearsky_stack
+
+    if ratio_forecast.ndim == 4:
+        if ratio_forecast.shape[1] != clearsky_stack.shape[0]:
+            raise ValueError(
+                "ratio_forecast time dimension does not match clearsky timesteps "
+                f"({ratio_forecast.shape[1]} != {clearsky_stack.shape[0]})."
+            )
+        return ratio_forecast * clearsky_stack[np.newaxis, :, :, :]
+
+    raise ValueError(
+        "ratio_forecast must have shape (time, lat, lon) or "
+        "(ensemble, time, lat, lon)."
+    )
+
+
+def prepend_t0(clearsky_data: xr.Dataset, ratio_data: np.ndarray, solar_forecast: np.ndarray, config: dict, clearsky_t0_time: datetime) -> np.ndarray:
+    # Prepend timestep 0: current observation (ratio_data[-1]) × clearsky at t=0
+    sds_cs_t0 = clearsky_data.sel(time=clearsky_t0_time.replace(tzinfo=None))[
+        config["nc_variable_names"]["sds_cs"]
+    ].values
+    solar_t0 = ratio_data[-1] * sds_cs_t0
+
+    if solar_forecast.ndim == 3:
+        solar_forecast = np.concatenate(
+            [solar_t0[np.newaxis, :, :], solar_forecast],
+            axis=0,
+        )
+    elif solar_forecast.ndim == 4:
+        # Broadcast the same t=0 clearsky-based analysis field to all ensembles.
+        solar_t0_ens = np.broadcast_to(
+            solar_t0,
+            (solar_forecast.shape[0],) + solar_t0.shape,
+        )
+        solar_forecast = np.concatenate(
+            [solar_t0_ens[:, np.newaxis, :, :], solar_forecast],
+            axis=1,
+        )
+    else:
+        raise ValueError(
+            "solar_forecast must have shape (time, lat, lon) or "
+            "(ensemble, time, lat, lon)."
+        )
     return solar_forecast
