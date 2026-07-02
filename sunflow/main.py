@@ -27,6 +27,7 @@ from .forecast import (
     prepend_t0,
     preprocess_data,
     probabilistic_advection_forecast,
+    solarsteps_forecast,
 )
 from .geospatial import check_solar_elevation, get_bbox
 from .time_handler import generate_time_steps, round_time
@@ -297,6 +298,14 @@ def run_nowcast(
         ens_members=nowcast_config.ens_members,
         alpha=nowcast_config.alpha,
         beta=nowcast_config.beta,
+    )
+
+    # SolarSTEPS forecast (ratio forecast)
+    ratio_forecast = solarsteps_forecast(
+        ratio_data,
+        motion_field,
+        nowcast_config.future_steps,
+        ens_members=nowcast_config.ens_members,
     )
 
     # Generate previous day time steps for clearsky lookup

@@ -3,8 +3,12 @@ from datetime import datetime
 
 import numpy as np
 import xarray as xr
+from loguru import logger
 from Models.ProbabilisticAdvection import ProbabilisticAdvection
+from Models.SolarSTEPS import SolarSTEPS
+from pysteps.cascade.bandpass_filters import _gaussweights_1d
 
+from .config import TARGET_SMALLEST_RESOLUTION
 from .geospatial import get_coordinates
 
 
@@ -100,6 +104,87 @@ def probabilistic_advection_forecast(
     forecast = pa.maps_forecast(n_steps, ratio_data, motion_field)
 
     return forecast
+
+
+def solarsteps_forecast(
+    ratio_data: np.ndarray,
+    motion_field: np.ndarray,
+    n_steps: int,
+    ens_members: int,
+) -> np.ndarray:
+    """Run a SolarSTEPS ensemble forecast on solar irradiance ratios.
+
+    Configures SolarSTEPS with fixed stochastic-noise and normalization
+    options, determines the number of cascade levels from the input grid
+    size, and generates an ensemble forecast for the requested lead times.
+
+    Args:
+        ratio_data: Input array of shape (time, lat, lon) containing
+            SDS/SDS_CS ratios for the past timesteps.
+        motion_field: Optical flow field of shape (2, lat, lon) as
+            produced by dense_lucaskanade.
+        n_steps: Number of forecast timesteps to produce.
+        ens_members: Number of ensemble members.
+
+    Returns:
+        Forecast array of shape (ensemble, n_steps, lat, lon).
+    """
+
+    n_cascade_levels = determine_cascade_levels(ratio_data)
+    solarsteps = SolarSTEPS(
+        ar_order=1,
+        n_cascade_levels=n_cascade_levels,
+        probmatching=True,
+        norm=True,
+        local=False,
+        noise_kwargs={
+            "noise_win_size": 90,
+            "noise_std_win_size": 15,
+            "noise_method": "local-SSFT",
+        },
+        norm_kwargs={"extra_normalization": True},
+        verbose=False,
+    )
+    forecast = solarsteps.ensemble_forecast(
+        ratio_data, motion_field, n_steps, seeds=np.arange(ens_members)
+    )
+
+    return forecast
+
+
+def determine_cascade_levels(ratio_data: np.ndarray) -> int:
+    """Determine the number of cascade levels for SolarSTEPS based on grid size.
+
+    Increases the number of cascade levels until the coarsest Gaussian
+    cascade resolution reaches or undershoots TARGET_SMALLEST_RESOLUTION
+    for the largest horizontal grid dimension.
+
+    Args:
+        ratio_data: Input array of shape (time, lat, lon) containing
+            SDS/SDS_CS ratios for the past timesteps.
+
+    Returns:
+        Number of cascade levels.
+
+    Raises:
+        ValueError: If TARGET_SMALLEST_RESOLUTION is less than or equal to 1.
+    """
+
+    if TARGET_SMALLEST_RESOLUTION <= 1:
+        raise ValueError("TARGET_SMALLEST_RESOLUTION must be greater than 1.")
+
+    largest_dimension = max(ratio_data.shape[1], ratio_data.shape[2])
+    n_cascade_levels = 1
+    while True:
+        _, resolution_centers = _gaussweights_1d(
+            largest_dimension, n_cascade_levels, gauss_scale=0.5
+        )
+        if resolution_centers[0] <= TARGET_SMALLEST_RESOLUTION:
+            logger.info(
+                f"Optimal number of cascades identified to be: {n_cascade_levels}"
+            )
+            return n_cascade_levels
+        n_cascade_levels += 1
 
 
 def multiply_clearsky(

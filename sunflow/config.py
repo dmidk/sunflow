@@ -10,6 +10,13 @@ BBOX_OPTIONS: dict[str, str | None] = {
     "CUSTOM": None,
 }
 
+# Centerpoint of lowest object resolved in number of grid points.
+# Used for determining the optimal number of cascades for SolarSTEPS.
+# Reverse engineered from the optimal values identified by Carpentieri et al.
+# "Intraday probabilistic forecasts of surface solar radiation with
+# cloud scale-dependent autoregressive advection"
+TARGET_SMALLEST_RESOLUTION = 1.3515
+
 
 @dataclass
 class S3Config:
