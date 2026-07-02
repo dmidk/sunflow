@@ -444,6 +444,7 @@ def save_forecast(
     nowcast_config: NowcastConfig,
     model_version: str,
     output_mode: str,
+    forecast_model: str,
     run_mode: str = "files",
     s3_config: S3Config | None = None,
 ) -> str:
@@ -489,13 +490,20 @@ def save_forecast(
         for i in range(0, n_steps)
     ]
 
+    if forecast_model == "probabilistic_advection":
+        ghi_variable_name = "GHI_probabilistic_advection"
+    elif forecast_model == "solarsteps":
+        ghi_variable_name = "GHI_solarsteps"
+    else:
+        raise ValueError(f"Invalid forecast_model '{forecast_model}'. ")
+
     ds = xr.Dataset(
         {
-            "probabilistic_advection": (
+            ghi_variable_name: (
                 ["ensemble", "time", "lat", "lon"],
                 forecast,
                 {
-                    "description": "Probabilistic advection solar forecast",
+                    "description": f"{forecast_model} solar forecast",
                     "long_name": "Surface downwelling solar radiation",
                     "units": "W m-2",
                 },
@@ -525,8 +533,7 @@ def save_forecast(
         },
         attrs={
             "description": (
-                f"Simple Probabilistic Advection solar forecast "
-                f"using {dataset_name} data"
+                f"{forecast_model} solar forecast " f"using {dataset_name} data"
             ),
             "output_mode": output_mode,
             "history": (

@@ -141,10 +141,14 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--full_ensemble",
         action="store_true",
-        help=(
-            "Save full ensemble output. By default, the pixel-wise median across "
-            "ensemble members is saved."
-        ),
+        help="Save full ensemble output. By default, the pixel-wise median across "
+        "ensemble members is saved.",
+    )
+    parser.add_argument(
+        "--forecast_model",
+        choices=["probabilistic_advection", "solarsteps"],
+        default="probabilistic_advection",
+        help="Choose forecast model (default: probabilistic_advection)",
     )
 
     args = parser.parse_args()
@@ -179,6 +183,7 @@ def parse_arguments() -> argparse.Namespace:
 def run_nowcast(
     time_step: datetime,
     run_mode: str,
+    forecast_model: str,
     config: dict,
     bbox: str,
     dataset_name: str,
@@ -193,6 +198,7 @@ def run_nowcast(
     Args:
         time_step: The time step to produce a forecast for.
         run_mode: One of 'download', 'files', or 's3'.
+        forecast_model: Forecast model to use ('probabilistic_advection' or 'solarsteps').
         config: Dataset configuration dict.
         bbox: Bounding box string.
         dataset_name: Name of dataset.
@@ -290,23 +296,27 @@ def run_nowcast(
     # Compute motion field
     motion_field = dense_lucaskanade(ratio_data)
 
-    # Probabilistic advection forecast (ratio forecast)
-    ratio_forecast = probabilistic_advection_forecast(
-        ratio_data,
-        motion_field,
-        nowcast_config.future_steps,
-        ens_members=nowcast_config.ens_members,
-        alpha=nowcast_config.alpha,
-        beta=nowcast_config.beta,
-    )
+    if forecast_model == "probabilistic_advection":
 
-    # SolarSTEPS forecast (ratio forecast)
-    ratio_forecast = solarsteps_forecast(
-        ratio_data,
-        motion_field,
-        nowcast_config.future_steps,
-        ens_members=nowcast_config.ens_members,
-    )
+        # Probabilistic advection forecast (ratio forecast)
+        ratio_forecast = probabilistic_advection_forecast(
+            ratio_data,
+            motion_field,
+            nowcast_config.future_steps,
+            ens_members=nowcast_config.ens_members,
+            alpha=nowcast_config.alpha,
+            beta=nowcast_config.beta,
+        )
+    elif forecast_model == "solarsteps":
+        # SolarSTEPS forecast (ratio forecast)
+        ratio_forecast = solarsteps_forecast(
+            ratio_data,
+            motion_field,
+            nowcast_config.future_steps,
+            ens_members=nowcast_config.ens_members,
+        )
+    else:
+        raise ValueError(f"Unknown forecast model: {forecast_model}")
 
     # Generate previous day time steps for clearsky lookup
     previous_day_time_steps = generate_time_steps(
@@ -392,6 +402,7 @@ def run_nowcast(
         nowcast_config,
         model_version,
         output_mode,
+        forecast_model,
         run_mode,
         s3_config,
     )
@@ -445,6 +456,7 @@ def cli() -> None:
     dataset_name = args.dataset
     bbox_choice = args.bbox
     bbox = get_bbox(bbox_choice, args.custom_bbox)
+    forecast_model = args.forecast_model
 
     config = yaml.safe_load(open("config.yaml"))[dataset_name]
 
@@ -454,6 +466,7 @@ def cli() -> None:
     logger.info(f"Running in {run_mode} mode")
     logger.info(f"Using {dataset_name} dataset")
     logger.info(f"Using {bbox_choice} bbox: {bbox}")
+    logger.info(f"Forecast model: {forecast_model}")
     logger.info(f"Number of ensemble members: {nowcast_config.ens_members}")
     if args.full_ensemble:
         logger.info("Output mode: full ensemble")
@@ -461,10 +474,11 @@ def cli() -> None:
         logger.info("Output mode: deterministic")
     else:
         logger.info("Output mode: median")
-    logger.info(
-        f"Using probabilistic advection noise parameters alpha={nowcast_config.alpha}, "
-        f"beta={nowcast_config.beta}"
-    )
+    if forecast_model == "probabilistic_advection":
+        logger.info(
+            "Using probabilistic advection noise parameters "
+            f"alpha={nowcast_config.alpha}, beta={nowcast_config.beta}"
+        )
 
     if nowcast_config.ens_members == 1 and (
         nowcast_config.alpha != 0.0 or nowcast_config.beta != 0.0
@@ -522,6 +536,7 @@ def cli() -> None:
             result = run_nowcast(
                 time_step,
                 run_mode,
+                forecast_model,
                 config,
                 bbox,
                 dataset_name,
