@@ -111,6 +111,8 @@ def solarsteps_forecast(
     motion_field: np.ndarray,
     n_steps: int,
     ens_members: int,
+    noise_win_size: float,
+    noise_std_win_size: float,
 ) -> np.ndarray:
     """Run a SolarSTEPS ensemble forecast on solar irradiance ratios.
 
@@ -126,6 +128,7 @@ def solarsteps_forecast(
         n_steps: Number of forecast timesteps to produce.
         ens_members: Number of ensemble members.
 
+
     Returns:
         Forecast array of shape (ensemble, n_steps, lat, lon).
     """
@@ -138,8 +141,8 @@ def solarsteps_forecast(
         norm=True,
         local=False,
         noise_kwargs={
-            "noise_win_size": 90,
-            "noise_std_win_size": 15,
+            "noise_win_size": noise_win_size,
+            "noise_std_win_size": noise_std_win_size,
             "noise_method": "local-SSFT",
         },
         norm_kwargs={"extra_normalization": True},

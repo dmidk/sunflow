@@ -314,6 +314,8 @@ def run_nowcast(
             motion_field,
             nowcast_config.future_steps,
             ens_members=nowcast_config.ens_members,
+            noise_win_size=nowcast_config.noise_win_size,
+            noise_std_win_size=nowcast_config.noise_std_win_size,
         )
     else:
         raise ValueError(f"Unknown forecast model: {forecast_model}")
@@ -478,6 +480,12 @@ def cli() -> None:
         logger.info(
             "Using probabilistic advection noise parameters "
             f"alpha={nowcast_config.alpha}, beta={nowcast_config.beta}"
+        )
+    elif forecast_model == "solarsteps":
+        logger.info(
+            "Using SolarSTEPS noise parameters "
+            f"noise_win_size={nowcast_config.noise_win_size}, "
+            f"noise_std_win_size={nowcast_config.noise_std_win_size}"
         )
 
     if nowcast_config.ens_members == 1 and (
