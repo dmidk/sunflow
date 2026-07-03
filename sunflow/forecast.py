@@ -111,6 +111,7 @@ def solarsteps_forecast(
     motion_field: np.ndarray,
     n_steps: int,
     ens_members: int,
+    noise_method: str | None,
     noise_win_size: float,
     noise_std_win_size: float,
 ) -> np.ndarray:
@@ -127,6 +128,9 @@ def solarsteps_forecast(
             produced by dense_lucaskanade.
         n_steps: Number of forecast timesteps to produce.
         ens_members: Number of ensemble members.
+        noise_method: Noise method to use (e.g., "local-SSFT").
+        noise_win_size: Window size for noise calculation.
+        noise_std_win_size: Standard deviation window size for noise calculation.
 
 
     Returns:
@@ -143,7 +147,7 @@ def solarsteps_forecast(
         noise_kwargs={
             "noise_win_size": noise_win_size,
             "noise_std_win_size": noise_std_win_size,
-            "noise_method": "local-SSFT",
+            "noise_method": noise_method,
         },
         norm_kwargs={"extra_normalization": True},
         verbose=False,

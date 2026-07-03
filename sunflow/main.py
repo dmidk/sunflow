@@ -314,6 +314,7 @@ def run_nowcast(
             motion_field,
             nowcast_config.future_steps,
             ens_members=nowcast_config.ens_members,
+            noise_method=nowcast_config.noise_method,
             noise_win_size=nowcast_config.noise_win_size,
             noise_std_win_size=nowcast_config.noise_std_win_size,
         )
@@ -484,19 +485,26 @@ def cli() -> None:
     elif forecast_model == "solarsteps":
         logger.info(
             "Using SolarSTEPS noise parameters "
+            f"noise_method={nowcast_config.noise_method}, "
             f"noise_win_size={nowcast_config.noise_win_size}, "
             f"noise_std_win_size={nowcast_config.noise_std_win_size}"
         )
 
-    if nowcast_config.ens_members == 1 and (
-        nowcast_config.alpha != 0.0 or nowcast_config.beta != 0.0
-    ):
-        logger.warning(
-            "Running with a single ensemble member, but non-zero probabilistic advection"
-            "noise parameters alpha and/or beta. This is generally not recommended as it"
-            "simply adds noise to the nowcast without providing any ensemble spread. "
-            "Consider setting alpha=0.0 and beta=0.0 for a single-member run."
-        )
+    if nowcast_config.ens_members == 1:
+        if nowcast_config.alpha != 0.0 or nowcast_config.beta != 0.0:
+            logger.warning(
+                "Running with a single ensemble member, but non-zero probabilistic "
+                "advection noise parameters alpha and/or beta. This is generally not "
+                "recommended as it simply adds noise to the nowcast without providing "
+                "any ensemble spread. "
+                "Consider setting alpha=0.0 and beta=0.0 for a single-member run."
+            )
+        elif forecast_model == "solarsteps":
+            logger.warning(
+                "Running SolarSTEPS with a single ensemble member. "
+                "This is generally not recommended as it simply adds noise to the "
+                "nowcast without providing any ensemble spread."
+            )
 
     validate_run_mode(run_mode, dataset_name)
     validate_config(config, dataset_name)

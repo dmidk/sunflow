@@ -54,6 +54,7 @@ class NowcastConfig:
     ens_members: int
     alpha: float
     beta: float
+    noise_method: str | None
     noise_win_size: int
     noise_std_win_size: int
     past_steps: int
@@ -84,25 +85,26 @@ class NowcastConfig:
         """
 
         ens_members = int(os.getenv("ENS_MEMBERS", "1"))
-        # Reference for default noise values:
+        # Probabilistic advection noise parameters
+        # (default values are based on the original implementation by Carpentieri et al.)
+        # Reference for default probabilistic advection noise values:
         # A. Carpentieri, D. Folini, D. Nerini, S. Pulkkinen, M. Wild, A. Meyer,
         # "Intraday probabilistic forecasts of surface solar radiation with cloud
         # scale-dependent autoregressive advection,"
         # Applied Energy, Volume 351, 2023
         default_alpha = 0.0 if ens_members == 1 else 9.29
         default_beta = 0.0 if ens_members == 1 else 0.17
-        default_noise_win_size = 0 if ens_members == 1 else 90
-        default_noise_std_win_size = 0 if ens_members == 1 else 15
+
+        # Default SolarSTEPS noise parameters are based on the original implementation
 
         return cls(
             nowcast_directory=os.getenv("NOWCAST_DIRECTORY", "."),
             ens_members=ens_members,
             alpha=float(os.getenv("ALPHA", str(default_alpha))),
             beta=float(os.getenv("BETA", str(default_beta))),
-            noise_win_size=int(os.getenv("NOISE_WIN_SIZE", str(default_noise_win_size))),
-            noise_std_win_size=int(
-                os.getenv("NOISE_STD_WIN_SIZE", str(default_noise_std_win_size))
-            ),
+            noise_method=os.getenv("NOISE_METHOD", "local-SSFT"),
+            noise_win_size=int(os.getenv("NOISE_WIN_SIZE", "90")),
+            noise_std_win_size=int(os.getenv("NOISE_STD_WIN_SIZE", "15")),
             past_steps=int(os.getenv("PAST_STEPS", "4")),
             future_steps=int(os.getenv("FUTURE_STEPS", "24")),
             input_data_availability_delay_minutes=int(

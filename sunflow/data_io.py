@@ -480,6 +480,14 @@ def save_forecast(
         raise ValueError("forecast must have shape (ensemble, time, lat, lon).")
 
     ens_members = forecast.shape[0]
+    if forecast_model == "probabilistic_advection":
+        noise_values = f"alpha: {nowcast_config.alpha}, beta: {nowcast_config.beta}"
+    elif forecast_model == "solarsteps":
+        noise_values = (
+            f"noise_method: {nowcast_config.noise_method}, "
+            f"noise_win_size: {nowcast_config.noise_win_size}, "
+            f"noise_std_win_size: {nowcast_config.noise_std_win_size}"
+        )
 
     # Build time coordinate (CF-convention: minutes since forecast reference time)
 
@@ -541,6 +549,9 @@ def save_forecast(
                 f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC"
             ),
             "model_version": model_version,
+            "forecast_model": forecast_model,
+            "input_data_source": dataset_name,
+            "noise_values": noise_values,
         },
     )
 
