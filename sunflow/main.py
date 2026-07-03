@@ -22,7 +22,13 @@ from .data_io import (
     save_forecast,
 )
 from .downloaders import download_past_data
-from .forecast import multiply_clearsky, preprocess_data, simple_advection_forecast
+from .forecast import (
+    multiply_clearsky,
+    prepend_t0,
+    preprocess_data,
+    probabilistic_advection_forecast,
+    solarsteps_forecast,
+)
 from .geospatial import check_solar_elevation, get_bbox
 from .time_handler import generate_time_steps, round_time
 from .validation import (
@@ -31,7 +37,6 @@ from .validation import (
     validate_clearsky_shapes,
     validate_config,
     validate_data_shape,
-    validate_nowcast_config,
     validate_run_mode,
     verify_environment_variables,
 )
@@ -133,6 +138,18 @@ def parse_arguments() -> argparse.Namespace:
         help="End of time span in ISO8601 format (inclusive). Use with --start-time.",
         default=None,
     )
+    parser.add_argument(
+        "--full_ensemble",
+        action="store_true",
+        help="Save full ensemble output. By default, the pixel-wise median across "
+        "ensemble members is saved.",
+    )
+    parser.add_argument(
+        "--forecast_model",
+        choices=["probabilistic_advection", "solarsteps"],
+        default="probabilistic_advection",
+        help="Choose forecast model (default: probabilistic_advection)",
+    )
 
     args = parser.parse_args()
 
@@ -166,12 +183,14 @@ def parse_arguments() -> argparse.Namespace:
 def run_nowcast(
     time_step: datetime,
     run_mode: str,
+    forecast_model: str,
     config: dict,
     bbox: str,
     dataset_name: str,
     bbox_choice: str,
     nowcast_config: NowcastConfig,
     s3_config: S3Config,
+    full_ensemble: bool = False,
     custom_time: bool = True,
 ) -> RunResult:
     """Run a single nowcast for the given (already-rounded) time step.
@@ -179,12 +198,15 @@ def run_nowcast(
     Args:
         time_step: The time step to produce a forecast for.
         run_mode: One of 'download', 'files', or 's3'.
+        forecast_model: Forecast model to use ('probabilistic_advection' or 'solarsteps').
         config: Dataset configuration dict.
         bbox: Bounding box string.
         dataset_name: Name of dataset.
         bbox_choice: Bounding box identifier.
         nowcast_config: NowcastConfig object.
         s3_config: S3Config object.
+        full_ensemble: If True, save all ensemble members. If False,
+            save pixel-wise median over ensemble members.
         custom_time: If True, skip the retry wait loop on missing data.
 
     Returns:
@@ -274,13 +296,30 @@ def run_nowcast(
     # Compute motion field
     motion_field = dense_lucaskanade(ratio_data)
 
-    # Simple forecast (ratio forecast)
-    ratio_forecast = simple_advection_forecast(
-        ratio_data,
-        motion_field,
-        nowcast_config.future_steps,
-        ens_members=nowcast_config.ens_members,
-    )
+    if forecast_model == "probabilistic_advection":
+
+        # Probabilistic advection forecast (ratio forecast)
+        ratio_forecast = probabilistic_advection_forecast(
+            ratio_data,
+            motion_field,
+            nowcast_config.future_steps,
+            ens_members=nowcast_config.ens_members,
+            alpha=nowcast_config.alpha,
+            beta=nowcast_config.beta,
+        )
+    elif forecast_model == "solarsteps":
+        # SolarSTEPS forecast (ratio forecast)
+        ratio_forecast = solarsteps_forecast(
+            ratio_data,
+            motion_field,
+            nowcast_config.future_steps,
+            ens_members=nowcast_config.ens_members,
+            noise_method=nowcast_config.noise_method,
+            noise_win_size=nowcast_config.noise_win_size,
+            noise_std_win_size=nowcast_config.noise_std_win_size,
+        )
+    else:
+        raise ValueError(f"Unknown forecast model: {forecast_model}")
 
     # Generate previous day time steps for clearsky lookup
     previous_day_time_steps = generate_time_steps(
@@ -331,16 +370,33 @@ def run_nowcast(
         config["nc_variable_names"],
     )
 
-    # Prepend timestep 0: current observation (ratio_data[-1]) × clearsky at t=0
-    sds_cs_t0 = clearsky_data.sel(time=clearsky_t0_time.replace(tzinfo=None))[
-        config["nc_variable_names"]["sds_cs"]
-    ].values
-    solar_t0 = ratio_data[-1] * sds_cs_t0
-    solar_forecast = np.concatenate([solar_t0[np.newaxis, :, :], solar_forecast], axis=0)
+    solar_forecast = prepend_t0(
+        clearsky_data, ratio_data, solar_forecast, config, clearsky_t0_time
+    )
+
+    if full_ensemble:
+        output_forecast = solar_forecast
+        output_mode = "full_ensemble"
+        logger.info("Saving full ensemble forecast")
+    else:
+        if solar_forecast.shape[0] == 1:
+            output_forecast = solar_forecast
+            output_mode = "deterministic"
+            logger.info(
+                "Saving deterministic forecast "
+                "(single ensemble member, kept as singleton ensemble dimension)"
+            )
+        else:
+            output_forecast = np.median(solar_forecast, axis=0, keepdims=True)
+            output_mode = "median"
+            logger.info(
+                "Saving pixel-wise median forecast across ensemble members "
+                "(with singleton ensemble dimension)"
+            )
 
     # Save forecast (now contains actual solar irradiance, not ratios)
     filename = save_forecast(
-        solar_forecast,
+        output_forecast,
         time_step,
         nowcast_config.future_steps + 1,  # +1 for the t=0 analysis step
         latitudes,
@@ -348,6 +404,8 @@ def run_nowcast(
         dataset_name,
         nowcast_config,
         model_version,
+        output_mode,
+        forecast_model,
         run_mode,
         s3_config,
     )
@@ -401,6 +459,7 @@ def cli() -> None:
     dataset_name = args.dataset
     bbox_choice = args.bbox
     bbox = get_bbox(bbox_choice, args.custom_bbox)
+    forecast_model = args.forecast_model
 
     config = yaml.safe_load(open("config.yaml"))[dataset_name]
 
@@ -410,10 +469,45 @@ def cli() -> None:
     logger.info(f"Running in {run_mode} mode")
     logger.info(f"Using {dataset_name} dataset")
     logger.info(f"Using {bbox_choice} bbox: {bbox}")
+    logger.info(f"Forecast model: {forecast_model}")
+    logger.info(f"Number of ensemble members: {nowcast_config.ens_members}")
+    if args.full_ensemble:
+        logger.info("Output mode: full ensemble")
+    elif nowcast_config.ens_members == 1:
+        logger.info("Output mode: deterministic")
+    else:
+        logger.info("Output mode: median")
+    if forecast_model == "probabilistic_advection":
+        logger.info(
+            "Using probabilistic advection noise parameters "
+            f"alpha={nowcast_config.alpha}, beta={nowcast_config.beta}"
+        )
+    elif forecast_model == "solarsteps":
+        logger.info(
+            "Using SolarSTEPS noise parameters "
+            f"noise_method={nowcast_config.noise_method}, "
+            f"noise_win_size={nowcast_config.noise_win_size}, "
+            f"noise_std_win_size={nowcast_config.noise_std_win_size}"
+        )
+
+    if nowcast_config.ens_members == 1:
+        if nowcast_config.alpha != 0.0 or nowcast_config.beta != 0.0:
+            logger.warning(
+                "Running with a single ensemble member, but non-zero probabilistic "
+                "advection noise parameters alpha and/or beta. This is generally not "
+                "recommended as it simply adds noise to the nowcast without providing "
+                "any ensemble spread. "
+                "Consider setting alpha=0.0 and beta=0.0 for a single-member run."
+            )
+        elif forecast_model == "solarsteps":
+            logger.warning(
+                "Running SolarSTEPS with a single ensemble member. "
+                "This is generally not recommended as it simply adds noise to the "
+                "nowcast without providing any ensemble spread."
+            )
 
     validate_run_mode(run_mode, dataset_name)
     validate_config(config, dataset_name)
-    validate_nowcast_config(nowcast_config)
     verify_environment_variables(run_mode, dataset_name)
 
     # Determine the time steps to run
@@ -458,12 +552,14 @@ def cli() -> None:
             result = run_nowcast(
                 time_step,
                 run_mode,
+                forecast_model,
                 config,
                 bbox,
                 dataset_name,
                 bbox_choice,
                 nowcast_config,
                 s3_config,
+                full_ensemble=args.full_ensemble,
                 custom_time=custom_time,
             )
             results.append(result)

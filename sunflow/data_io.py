@@ -443,6 +443,8 @@ def save_forecast(
     dataset_name: str,
     nowcast_config: NowcastConfig,
     model_version: str,
+    output_mode: str,
+    forecast_model: str,
     run_mode: str = "files",
     s3_config: S3Config | None = None,
 ) -> str:
@@ -453,16 +455,18 @@ def save_forecast(
     numeric values (float64, minutes since the forecast reference time).
 
     Args:
-        forecast: Forecast array, shape [time, lat, lon] or
-            [ensemble, time, lat, lon].
+        forecast: Forecast array, shape [ensemble, time, lat, lon].
         time_step: Forecast reference time (start of the forecast window).
         n_steps: Number of forecast time steps to write.
         latitudes: 1-D array of latitude values (degrees).
         longitudes: 1-D array of longitude values (degrees).
         dataset_name: Name of the source dataset (options: KNMI, DWD).
-        nowcast_config: NowcastConfig object supplying output directory,
-            ensemble size, and input data frequency.
+        nowcast_config: NowcastConfig object supplying output directory
+            and input data frequency.
         model_version: Model version string written as a global attribute.
+        output_mode: Output aggregation mode label written to global
+            NetCDF attrs (expected: 'deterministic', 'median',
+            or 'full_ensemble').
         run_mode: One of 'files' (local) or 's3'. Defaults to 'files'.
         s3_config: S3Config object; required when run_mode is 's3'.
 
@@ -470,12 +474,20 @@ def save_forecast(
         Filename (basename only) of the written NetCDF file.
     """
     input_data_frequency_minutes = nowcast_config.input_data_frequency_minutes
-    ens_members = nowcast_config.ens_members
     filename = f"SolarNowcast_{time_step.strftime('%Y%m%d%H%M')}.nc"
 
-    # Add ensemble dimension if needed (forecast should be [ensemble, time, lat, lon])
-    if forecast.ndim == 3:
-        forecast = forecast[np.newaxis, :, :, :]  # Now [1, time, lat, lon]
+    if forecast.ndim != 4:
+        raise ValueError("forecast must have shape (ensemble, time, lat, lon).")
+
+    ens_members = forecast.shape[0]
+    if forecast_model == "probabilistic_advection":
+        noise_values = f"alpha: {nowcast_config.alpha}, beta: {nowcast_config.beta}"
+    elif forecast_model == "solarsteps":
+        noise_values = (
+            f"noise_method: {nowcast_config.noise_method}, "
+            f"noise_win_size: {nowcast_config.noise_win_size}, "
+            f"noise_std_win_size: {nowcast_config.noise_std_win_size}"
+        )
 
     # Build time coordinate (CF-convention: minutes since forecast reference time)
 
@@ -486,13 +498,20 @@ def save_forecast(
         for i in range(0, n_steps)
     ]
 
+    if forecast_model == "probabilistic_advection":
+        ghi_variable_name = "GHI_probabilistic_advection"
+    elif forecast_model == "solarsteps":
+        ghi_variable_name = "GHI_solarsteps"
+    else:
+        raise ValueError(f"Invalid forecast_model '{forecast_model}'. ")
+
     ds = xr.Dataset(
         {
-            "probabilistic_advection": (
+            ghi_variable_name: (
                 ["ensemble", "time", "lat", "lon"],
                 forecast,
                 {
-                    "description": "Probabilistic advection solar forecast",
+                    "description": f"{forecast_model} solar forecast",
                     "long_name": "Surface downwelling solar radiation",
                     "units": "W m-2",
                 },
@@ -522,14 +541,17 @@ def save_forecast(
         },
         attrs={
             "description": (
-                f"Simple Probabilistic Advection solar forecast "
-                f"using {dataset_name} data"
+                f"{forecast_model} solar forecast " f"using {dataset_name} data"
             ),
+            "output_mode": output_mode,
             "history": (
                 f"Created "
                 f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC"
             ),
             "model_version": model_version,
+            "forecast_model": forecast_model,
+            "input_data_source": dataset_name,
+            "noise_values": noise_values,
         },
     )
 
