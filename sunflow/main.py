@@ -22,8 +22,14 @@ from .data_io import (
     save_forecast,
 )
 from .downloaders import download_past_data
-from .forecast import multiply_clearsky, preprocess_data, simple_advection_forecast
-from .geospatial import check_solar_elevation, get_bbox
+from .forecast import (
+    PVLIB_CLEARSKY_VARIABLE_NAME,
+    make_pvlib_clearsky_dataset,
+    multiply_clearsky,
+    preprocess_data,
+    simple_advection_forecast,
+)
+from .geospatial import check_solar_elevation, get_bbox, get_coordinates
 from .time_handler import generate_time_steps, round_time
 from .validation import (
     MissingClearskyDataError,
@@ -193,6 +199,10 @@ def run_nowcast(
     """
     time_step_str = time_step.strftime("%Y-%m-%dT%H:%M:%SZ")
     logger.info(f"--- Running nowcast for {time_step_str} ---")
+    nc_variable_names = config["nc_variable_names"].copy()
+    clearsky_source = config.get("clearsky_source", "file")
+    if clearsky_source == "pvlib":
+        nc_variable_names["sds_cs"] = PVLIB_CLEARSKY_VARIABLE_NAME
 
     # Fetch current data (with retry loop in operational mode)
     fetch_current_data_with_retry(
@@ -209,8 +219,13 @@ def run_nowcast(
 
     # Check solar elevation
     try:
-        solar_elevation = check_solar_elevation(time_step)
-        logger.info(f"Solar elevation: {solar_elevation:.2f} degrees")
+        lon_min, lat_min, lon_max, lat_max = map(float, bbox.split(","))
+        solar_elevation = max(
+            check_solar_elevation(time_step, lat=lat, lon=lon)
+            for lat in (lat_min, lat_max)
+            for lon in (lon_min, lon_max)
+        )
+        logger.info(f"Maximum corner solar elevation: {solar_elevation:.2f} degrees")
         if solar_elevation < 1:
             reason = "sun too low"
             logger.warning(f"{reason.capitalize()}. Skipping.\n")
@@ -261,10 +276,20 @@ def run_nowcast(
     if n_loaded == 0:
         raise RuntimeError("No past data loaded. Cannot proceed.")
 
+    if clearsky_source == "pvlib":
+        latitudes, longitudes = get_coordinates(data)
+        data = data.merge(
+            make_pvlib_clearsky_dataset(
+                past_time_steps,
+                latitudes,
+                longitudes,
+            )
+        )
+
     # Preprocess
     logger.info("Preprocessing data...")
     ratio_data, latitudes, longitudes = preprocess_data(
-        data, past_time_steps, config["nc_variable_names"]
+        data, past_time_steps, nc_variable_names
     )
 
     # Validate data shape
@@ -294,19 +319,27 @@ def run_nowcast(
     clearsky_t0_time = time_step - timedelta(days=1)
     all_clearsky_time_steps = [clearsky_t0_time] + previous_day_time_steps
 
-    # Fetch clearsky data with fallback to earlier days if a file is missing
-    logger.info("Fetching clearsky data...")
-    clearsky_data = fetch_clearsky_with_fallback(
-        all_clearsky_time_steps,
-        run_mode,
-        nowcast_config.max_clearsky_fallback_days,
-        config,
-        bbox,
-        dataset_name,
-        bbox_choice,
-        nowcast_config,
-        s3_config,
-    )
+    if clearsky_source == "pvlib":
+        logger.info("Generating pvlib clearsky data...")
+        clearsky_data = make_pvlib_clearsky_dataset(
+            all_clearsky_time_steps,
+            latitudes,
+            longitudes,
+        )
+    else:
+        # Fetch clearsky data with fallback to earlier days if a file is missing
+        logger.info("Fetching clearsky data...")
+        clearsky_data = fetch_clearsky_with_fallback(
+            all_clearsky_time_steps,
+            run_mode,
+            nowcast_config.max_clearsky_fallback_days,
+            config,
+            bbox,
+            dataset_name,
+            bbox_choice,
+            nowcast_config,
+            s3_config,
+        )
 
     # Validate clearsky data
     try:
@@ -319,7 +352,7 @@ def run_nowcast(
         clearsky_data,
         previous_day_time_steps,
         expected_spatial_shape,
-        config["nc_variable_names"],
+        nc_variable_names,
     )
 
     # Multiply by clearsky to get actual solar irradiance
@@ -328,12 +361,12 @@ def run_nowcast(
         ratio_forecast,
         clearsky_data,
         previous_day_time_steps,
-        config["nc_variable_names"],
+        nc_variable_names,
     )
 
     # Prepend timestep 0: current observation (ratio_data[-1]) × clearsky at t=0
     sds_cs_t0 = clearsky_data.sel(time=clearsky_t0_time.replace(tzinfo=None))[
-        config["nc_variable_names"]["sds_cs"]
+        nc_variable_names["sds_cs"]
     ].values
     solar_t0 = ratio_data[-1] * sds_cs_t0
     solar_forecast = np.concatenate([solar_t0[np.newaxis, :, :], solar_forecast], axis=0)

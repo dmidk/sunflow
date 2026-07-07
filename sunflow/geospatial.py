@@ -83,6 +83,9 @@ def get_coordinates(ds: xr.Dataset) -> tuple[np.ndarray, np.ndarray]:
     elif "lat" in ds.coords and "lon" in ds.coords:
         latitudes = ds.lat.values
         longitudes = ds.lon.values
+    elif "latitude" in ds.coords and "longitude" in ds.coords:
+        latitudes = ds.latitude.values
+        longitudes = ds.longitude.values
     else:
         raise RuntimeError("Could not find coordinates in dataset.")
 
@@ -97,23 +100,26 @@ def get_coordinates(ds: xr.Dataset) -> tuple[np.ndarray, np.ndarray]:
 
 def check_solar_elevation(
     time: datetime,
-    lat: float = 55.6761,
-    lon: float = 12.5683,
+    lat: float,
+    lon: float,
 ) -> float:
     """Compute the solar elevation angle at a given time and location.
 
-    Uses pvlib to calculate the solar position. Defaults to Copenhagen,
-    Denmark (55.68°N, 12.57°E).
+    Uses pvlib to calculate the solar position. Longitudes in 0..360 convention
+    are converted to the -180..180 convention expected by pvlib.
 
     Args:
         time: Datetime (timezone-aware) for which to compute the elevation.
-        lat: Latitude in decimal degrees. Default 55.6761 (Copenhagen).
-        lon: Longitude in decimal degrees. Default 12.5683 (Copenhagen).
+        lat: Latitude in decimal degrees.
+        lon: Longitude in decimal degrees.
 
     Returns:
         Solar elevation angle in degrees above the horizon. Negative values
         indicate the sun is below the horizon.
     """
+    if lon > 180:
+        lon -= 360
+
     location = pvlib.location.Location(lat, lon)
     solar_elevation = location.get_solarposition(time)["elevation"].values[0]
     return solar_elevation

@@ -2,10 +2,73 @@
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
+import pvlib
 import xarray as xr
 from Models.ProbabilisticAdvection import ProbabilisticAdvection
 
 from .geospatial import get_coordinates
+
+PVLIB_CLEARSKY_VARIABLE_NAME = "pvlib_clearsky_ghi"
+
+
+def make_pvlib_clearsky_dataset(
+    times: list[datetime],
+    latitudes: np.ndarray,
+    longitudes: np.ndarray,
+) -> xr.Dataset:
+    """Compute a pvlib simplified-Solis clear-sky GHI dataset on a lat/lon grid.
+
+    For each timestep in `times`, solar position is computed at every grid
+    point by repeating the timestamp across all (lat, lon) pairs. The
+    simplified Solis clear-sky model is then applied to the apparent solar
+    elevation to produce global horizontal irradiance (GHI) in W m⁻².
+    Longitudes are normalised to the range [-180, 180] before the solar
+    position calculation.
+
+    Args:
+        times: Ordered list of timezone-aware datetimes for which to
+            compute clear-sky irradiance.
+        latitudes: 1-D array of latitude values in degrees North.
+        longitudes: 1-D array of longitude values in degrees East
+            (values > 180 are wrapped to [-180, 180]).
+
+    Returns:
+        xr.Dataset with a single variable keyed by
+        PVLIB_CLEARSKY_VARIABLE_NAME of shape (time, latitude, longitude)
+        containing GHI in W m⁻². The time coordinate is stored without
+        timezone information.
+    """
+    lon_grid, lat_grid = np.meshgrid(longitudes, latitudes)
+    lon_grid = np.where(lon_grid > 180, lon_grid - 360, lon_grid)
+    flat_latitudes = lat_grid.ravel()
+    flat_longitudes = lon_grid.ravel()
+
+    fields = []
+    for time in times:
+        repeated_times = [time] * len(flat_latitudes)
+        solar_position = pvlib.solarposition.get_solarposition(
+            repeated_times,
+            flat_latitudes,
+            flat_longitudes,
+            method='nrel_numpy',
+        )
+        clearsky = pvlib.clearsky.simplified_solis(solar_position["apparent_elevation"])
+        fields.append(clearsky["ghi"].to_numpy().reshape(lat_grid.shape))
+
+    return xr.Dataset(
+        {
+            PVLIB_CLEARSKY_VARIABLE_NAME: (
+                ["time", "latitude", "longitude"],
+                np.stack(fields),
+            )
+        },
+        coords={
+            "time": [time.replace(tzinfo=None) for time in times],
+            "latitude": latitudes,
+            "longitude": longitudes,
+        },
+    )
 
 
 def preprocess_data(
