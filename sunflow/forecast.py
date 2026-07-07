@@ -46,7 +46,7 @@ def make_pvlib_clearsky_dataset(
 
     fields = []
     for time in times:
-        repeated_times = pd.DatetimeIndex([time] * len(flat_latitudes))
+        repeated_times = [time] * len(flat_latitudes)
         solar_position = pvlib.solarposition.get_solarposition(
             repeated_times,
             flat_latitudes,
