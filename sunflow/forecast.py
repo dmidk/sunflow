@@ -51,6 +51,7 @@ def make_pvlib_clearsky_dataset(
             repeated_times,
             flat_latitudes,
             flat_longitudes,
+            method='nrel_numpy',
         )
         clearsky = pvlib.clearsky.simplified_solis(solar_position["apparent_elevation"])
         fields.append(clearsky["ghi"].to_numpy().reshape(lat_grid.shape))
