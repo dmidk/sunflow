@@ -31,9 +31,35 @@ def subset_to_bbox(ds: xr.Dataset, bbox: str) -> xr.Dataset:
     lat_ascending = lat_values[0] < lat_values[-1]
     lon_ascending = lon_values[0] < lon_values[-1]
 
+    # Select by coordinate centers but keep cells whose inferred edges intersect bbox.
+    # Expanding by half a grid step avoids dropping one edge pixel in each direction.
+    lat_half_step = (
+        0.5 * float(np.median(np.abs(np.diff(lat_values))))
+        if len(lat_values) > 1
+        else 0.0
+    )
+    lon_half_step = (
+        0.5 * float(np.median(np.abs(np.diff(lon_values))))
+        if len(lon_values) > 1
+        else 0.0
+    )
+
+    lat_sel_min = lat_min - lat_half_step
+    lat_sel_max = lat_max + lat_half_step
+    lon_sel_min = lon_min - lon_half_step
+    lon_sel_max = lon_max + lon_half_step
+
     # Arrange slice bounds based on coordinate order
-    lat_slice = slice(lat_min, lat_max) if lat_ascending else slice(lat_max, lat_min)
-    lon_slice = slice(lon_min, lon_max) if lon_ascending else slice(lon_max, lon_min)
+    lat_slice = (
+        slice(lat_sel_min, lat_sel_max)
+        if lat_ascending
+        else slice(lat_sel_max, lat_sel_min)
+    )
+    lon_slice = (
+        slice(lon_sel_min, lon_sel_max)
+        if lon_ascending
+        else slice(lon_sel_max, lon_sel_min)
+    )
 
     return ds.sel(
         {
