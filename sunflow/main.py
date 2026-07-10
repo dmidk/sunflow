@@ -13,7 +13,7 @@ from loguru import logger
 from pysteps.motion.lucaskanade import dense_lucaskanade
 
 from . import __version__
-from .config import NowcastConfig, S3Config
+from .config import DOMAIN_OPTIONS, NowcastConfig, S3Config
 from .data_io import (
     fetch_clearsky_with_fallback,
     fetch_current_data_with_retry,
@@ -23,13 +23,20 @@ from .data_io import (
 )
 from .downloaders import download_past_data
 from .forecast import multiply_clearsky, preprocess_data, simple_advection_forecast
-from .geospatial import check_solar_elevation, get_bbox
+from .geospatial import (
+    check_solar_elevation,
+    crop_forecast_to_domain,
+    domain_contains,
+    resolve_domain_bbox,
+    validate_dataset_covers_domain,
+)
 from .time_handler import generate_time_steps, round_time
 from .validation import (
     MissingClearskyDataError,
     validate_clearsky_completeness,
     validate_clearsky_shapes,
     validate_config,
+    validate_custom_domain,
     validate_data_shape,
     validate_nowcast_config,
     validate_run_mode,
@@ -53,17 +60,18 @@ class RunResult:
 # Model version
 model_version = __version__
 
+DOMAIN_CHOICES = tuple(DOMAIN_OPTIONS)
+
 
 def parse_arguments() -> argparse.Namespace:
     """Parse and validate command line arguments.
 
-    Defines arguments for run mode, dataset, bounding box, and an optional
-    custom time override. Validates that --custom-bbox is provided and
-    correctly formatted when --bbox=CUSTOM is selected.
+    Defines arguments for run mode, dataset, spatial domains, and an optional
+    custom time override.
 
     Returns:
         Parsed argument namespace with attributes run_mode, dataset,
-        bbox, custom_bbox, and time.
+        domain_satellite, domain_nowcast, and time.
     """
 
     def parse_datetime_with_timezone(datetime_str: str) -> datetime:
@@ -104,15 +112,30 @@ def parse_arguments() -> argparse.Namespace:
         "(default: KNMI)",
     )
     parser.add_argument(
-        "--bbox",
-        choices=["DENMARK", "NW_EUROPE", "CUSTOM"],
+        "--domain_satellite",
+        choices=DOMAIN_CHOICES,
         default="NW_EUROPE",
-        help="Choose bounding box (default: NW_EUROPE)",
+        help="Domain required for satellite input coverage (default: NW_EUROPE)",
     )
     parser.add_argument(
-        "--custom-bbox",
+        "--custom_domain_satellite",
         type=str,
-        help='Custom bbox in format "lon_min,lat_min,lon_max,lat_max"',
+        help='Custom domain_satellite in format "lon_min,lat_min,lon_max,lat_max"',
+        default=None,
+    )
+    parser.add_argument(
+        "--domain_nowcast",
+        choices=DOMAIN_CHOICES,
+        default=None,
+        help=(
+            "Domain written to forecast output. Defaults to domain_satellite "
+            "when omitted"
+        ),
+    )
+    parser.add_argument(
+        "--custom_domain_nowcast",
+        type=str,
+        help='Custom domain_nowcast in format "lon_min,lat_min,lon_max,lat_max"',
         default=None,
     )
     parser.add_argument(
@@ -122,15 +145,15 @@ def parse_arguments() -> argparse.Namespace:
         default=None,
     )
     parser.add_argument(
-        "--start-time",
+        "--start_time",
         type=parse_datetime_with_timezone,
-        help="Start of time span in ISO8601 format. Use with --end-time.",
+        help="Start of time span in ISO8601 format. Use with --end_time.",
         default=None,
     )
     parser.add_argument(
-        "--end-time",
+        "--end_time",
         type=parse_datetime_with_timezone,
-        help="End of time span in ISO8601 format (inclusive). Use with --start-time.",
+        help="End of time span in ISO8601 format (inclusive). Use with --start_time.",
         default=None,
     )
 
@@ -138,27 +161,30 @@ def parse_arguments() -> argparse.Namespace:
 
     # Validate time arguments
     if args.time and (args.start_time or args.end_time):
-        parser.error("--time cannot be combined with --start-time/--end-time")
+        parser.error("--time cannot be combined with --start_time/--end_time")
     if bool(args.start_time) != bool(args.end_time):
-        parser.error("--start-time and --end-time must be provided together")
+        parser.error("--start_time and --end_time must be provided together")
     if args.start_time and args.end_time and args.start_time > args.end_time:
-        parser.error("--start-time must be before --end-time")
+        parser.error("--start_time must be before --end_time")
 
-    # Validate custom bbox
-    if args.bbox == "CUSTOM":
-        if not args.custom_bbox:
-            parser.error("--custom-bbox is required when --bbox=CUSTOM")
-        try:
-            # Validate format by trying to parse
-            bbox_parts = args.custom_bbox.split(",")
-            if len(bbox_parts) != 4:
-                raise ValueError("Must have exactly 4 comma-separated values")
-            [float(x) for x in bbox_parts]  # Ensure all are numeric
-        except ValueError as e:
-            parser.error(
-                f"Invalid --custom-bbox format: {e}. "
-                "Use format 'lon_min,lat_min,lon_max,lat_max'"
-            )
+    validate_custom_domain(
+        parser,
+        args.domain_satellite,
+        args.custom_domain_satellite,
+        "--domain_satellite",
+        "--custom_domain_satellite",
+    )
+
+    if args.domain_nowcast is None and args.custom_domain_nowcast:
+        parser.error("--custom_domain_nowcast requires --domain_nowcast=CUSTOM")
+
+    validate_custom_domain(
+        parser,
+        args.domain_nowcast,
+        args.custom_domain_nowcast,
+        "--domain_nowcast",
+        "--custom_domain_nowcast",
+    )
 
     return args
 
@@ -167,9 +193,10 @@ def run_nowcast(
     time_step: datetime,
     run_mode: str,
     config: dict,
-    bbox: str,
+    domain_satellite: str,
+    domain_nowcast: str,
     dataset_name: str,
-    bbox_choice: str,
+    domain_satellite_name: str,
     nowcast_config: NowcastConfig,
     s3_config: S3Config,
     custom_time: bool = True,
@@ -180,9 +207,10 @@ def run_nowcast(
         time_step: The time step to produce a forecast for.
         run_mode: One of 'download', 'files', or 's3'.
         config: Dataset configuration dict.
-        bbox: Bounding box string.
+        domain_satellite: Domain string used for satellite input coverage.
+        domain_nowcast: Domain string used for output cropping.
         dataset_name: Name of dataset.
-        bbox_choice: Bounding box identifier.
+        domain_satellite_name: Domain identifier used for input filenames.
         nowcast_config: NowcastConfig object.
         s3_config: S3Config object.
         custom_time: If True, skip the retry wait loop on missing data.
@@ -199,9 +227,9 @@ def run_nowcast(
         time_step,
         run_mode,
         config,
-        bbox,
+        domain_satellite,
         dataset_name,
-        bbox_choice,
+        domain_satellite_name,
         nowcast_config,
         s3_config,
         custom_time=custom_time,
@@ -234,32 +262,39 @@ def run_nowcast(
     logger.info(f"Loading past data for {len(past_time_steps)} time steps...")
     match run_mode:
         case "download":
-            data = download_past_data(past_time_steps, config, bbox, dataset_name)
+            data = download_past_data(
+                past_time_steps,
+                config,
+                domain_satellite,
+                dataset_name,
+            )
         case "files":
             data = load_data_from_files(
                 past_time_steps,
                 dataset_name,
-                bbox_choice,
+                domain_satellite_name,
                 nowcast_config.satellite_data_directory,
                 "past data",
                 config["filename_format"],
-                bbox=bbox,
+                bbox=domain_satellite,
             )
         case "s3":
             data = load_data_from_s3(
                 past_time_steps,
                 dataset_name,
-                bbox_choice,
+                domain_satellite_name,
                 s3_config,
                 "past data",
                 config["filename_format"],
-                bbox=bbox,
+                bbox=domain_satellite,
             )
 
     n_loaded = len(data.time) if "time" in data.coords else 0
     logger.info(f"Loaded {n_loaded} past data timesteps")
     if n_loaded == 0:
         raise RuntimeError("No past data loaded. Cannot proceed.")
+    if run_mode in {"files", "s3"}:
+        validate_dataset_covers_domain(data, domain_satellite, "Input dataset")
 
     # Preprocess
     logger.info("Preprocessing data...")
@@ -301,12 +336,19 @@ def run_nowcast(
         run_mode,
         nowcast_config.max_clearsky_fallback_days,
         config,
-        bbox,
+        domain_satellite,
         dataset_name,
-        bbox_choice,
+        domain_satellite_name,
         nowcast_config,
         s3_config,
     )
+
+    if run_mode in {"files", "s3"} and clearsky_data.sizes.get("time", 0) > 0:
+        validate_dataset_covers_domain(
+            clearsky_data,
+            domain_satellite,
+            "Clearsky dataset",
+        )
 
     # Validate clearsky data
     try:
@@ -337,6 +379,13 @@ def run_nowcast(
     ].values
     solar_t0 = ratio_data[-1] * sds_cs_t0
     solar_forecast = np.concatenate([solar_t0[np.newaxis, :, :], solar_forecast], axis=0)
+
+    solar_forecast, latitudes, longitudes = crop_forecast_to_domain(
+        solar_forecast,
+        latitudes,
+        longitudes,
+        domain_nowcast,
+    )
 
     # Save forecast (now contains actual solar irradiance, not ratios)
     filename = save_forecast(
@@ -399,8 +448,38 @@ def cli() -> None:
 
     run_mode = args.run_mode
     dataset_name = args.dataset
-    bbox_choice = args.bbox
-    bbox = get_bbox(bbox_choice, args.custom_bbox)
+    domain_satellite_name = args.domain_satellite
+    domain_satellite = resolve_domain_bbox(
+        domain_satellite_name,
+        args.custom_domain_satellite,
+    )
+    if domain_satellite is None:
+        raise RuntimeError(
+            "domain_satellite could not be resolved. "
+            "Use a predefined choice or provide --custom_domain_satellite."
+        )
+
+    domain_nowcast_name = args.domain_nowcast
+    if domain_nowcast_name is None:
+        domain_nowcast_name = domain_satellite_name
+        domain_nowcast = domain_satellite
+    else:
+        domain_nowcast = resolve_domain_bbox(
+            domain_nowcast_name,
+            args.custom_domain_nowcast,
+        )
+        if domain_nowcast is None:
+            raise RuntimeError(
+                "domain_nowcast could not be resolved. "
+                "Use a predefined choice or provide --custom_domain_nowcast."
+            )
+
+    if not domain_contains(domain_satellite, domain_nowcast):
+        raise RuntimeError(
+            "domain_nowcast must be fully contained within domain_satellite. "
+            f"Got domain_satellite={domain_satellite}, "
+            f"domain_nowcast={domain_nowcast}."
+        )
 
     config = yaml.safe_load(open("config.yaml"))[dataset_name]
 
@@ -409,7 +488,8 @@ def cli() -> None:
 
     logger.info(f"Running in {run_mode} mode")
     logger.info(f"Using {dataset_name} dataset")
-    logger.info(f"Using {bbox_choice} bbox: {bbox}")
+    logger.info(f"Using satellite domain {domain_satellite_name}: {domain_satellite}")
+    logger.info(f"Using nowcast domain {domain_nowcast_name}: {domain_nowcast}")
 
     validate_run_mode(run_mode, dataset_name)
     validate_config(config, dataset_name)
@@ -459,9 +539,10 @@ def cli() -> None:
                 time_step,
                 run_mode,
                 config,
-                bbox,
+                domain_satellite,
+                domain_nowcast,
                 dataset_name,
-                bbox_choice,
+                domain_satellite_name,
                 nowcast_config,
                 s3_config,
                 custom_time=custom_time,
