@@ -139,8 +139,8 @@ podman run -it --rm --entrypoint="" sunflow bash
 - `--domain_nowcast` - Domain written to output (DENMARK, NW_EUROPE, NW_EUROPE_SATELLITE, CUSTOM, defaults to `--domain_satellite`)
 - `--custom_domain_nowcast` - Custom `domain_nowcast` (lon_min,lat_min,lon_max,lat_max)
 - `--time` - Specific time for processing in ISO8601 format
-- `--start_time` - Start of a time range in ISO8601 format (use with `--end-time`)
-- `--end_time` - End of a time range in ISO8601 format, inclusive (use with `--start-time`)
+- `--start_time` - Start of a time range in ISO8601 format (use with `--end_time`)
+- `--end_time` - End of a time range in ISO8601 format, inclusive (use with `--start_time`)
 - `--run_mode` - Specify run mode: `download` (fetch from API), `files` (local files), or `s3` (object storage)
 
 ## Data Sources
