@@ -255,8 +255,23 @@ def crop_forecast_to_domain(
         )
 
     lon_min, lat_min, lon_max, lat_max = parse_bbox(domain_bbox)
-    lat_idx = np.where((latitudes >= lat_min) & (latitudes <= lat_max))[0]
-    lon_idx = np.where((longitudes >= lon_min) & (longitudes <= lon_max))[0]
+
+    # Expand by half a grid step to keep edge cells whose area intersects bbox.
+    lat_half_step = (
+        0.5 * float(np.median(np.abs(np.diff(latitudes)))) if len(latitudes) > 1 else 0.0
+    )
+    lon_half_step = (
+        0.5 * float(np.median(np.abs(np.diff(longitudes))))
+        if len(longitudes) > 1
+        else 0.0
+    )
+
+    lat_idx = np.where(
+        (latitudes >= lat_min - lat_half_step) & (latitudes <= lat_max + lat_half_step)
+    )[0]
+    lon_idx = np.where(
+        (longitudes >= lon_min - lon_half_step) & (longitudes <= lon_max + lon_half_step)
+    )[0]
 
     if len(lat_idx) == 0 or len(lon_idx) == 0:
         raise RuntimeError(
