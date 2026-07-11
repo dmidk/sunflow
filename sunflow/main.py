@@ -138,6 +138,12 @@ def parse_arguments() -> argparse.Namespace:
         default=None,
     )
     parser.add_argument(
+        "--ensemble-members",
+        type=int,
+        default=1,
+        help="Number of ensemble members (default: 1)",
+    )
+    parser.add_argument(
         "--full_ensemble",
         action="store_true",
         help=(
@@ -428,9 +434,9 @@ def cli() -> None:
     )
 
     # Load configuration
-    nowcast_config = NowcastConfig.from_env()
-    s3_config = S3Config.from_env()
     args = parse_arguments()
+    nowcast_config = NowcastConfig.from_env(ensemble_members=args.ensemble_members)
+    s3_config = S3Config.from_env()
 
     run_mode = args.run_mode
     dataset_name = args.dataset

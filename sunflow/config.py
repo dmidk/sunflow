@@ -56,13 +56,12 @@ class NowcastConfig:
     max_clearsky_fallback_days: int
 
     @classmethod
-    def from_env(cls) -> Self:
+    def from_env(cls, ensemble_members: int = 1) -> Self:
         """Load nowcast configuration from environment variables with defaults.
 
         Reads the following environment variables:
 
         - NOWCAST_DIRECTORY (default: .)
-        - ENS_MEMBERS (default: 1)
         - ALPHA (default: 0.0 for ENS_MEMBERS=1, 9.29 for ENS_MEMBERS>1)
         - BETA (default: 0.0 for ENS_MEMBERS=1, 0.17 for ENS_MEMBERS>1)
         - PAST_STEPS (default: 4)
@@ -74,7 +73,7 @@ class NowcastConfig:
         - MAX_CLEARSKY_FALLBACK_DAYS (default: 3)
         """
 
-        ens_members = int(os.getenv("ENS_MEMBERS", "1"))
+        ens_members = ensemble_members
         # Reference for default noise values:
         # A. Carpentieri, D. Folini, D. Nerini, S. Pulkkinen, M. Wild, A. Meyer,
         # "Intraday probabilistic forecasts of surface solar radiation with cloud

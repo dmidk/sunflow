@@ -101,7 +101,6 @@ podman run -it --rm --entrypoint="" sunflow bash
 |----------|---------|-------------|
 | `NOWCAST_DIRECTORY` | `.` | Directory for forecast output files |
 | `SATELLITE_DATA_DIRECTORY` | `.` | Directory for input satellite data archive |
-| `ENS_MEMBERS` | `1` | Number of ensemble members |
 | `PAST_STEPS` | `4` | Number of past time steps for motion field |
 | `FUTURE_STEPS` | `24` | Number of forecast time steps |
 | `INPUT_DATA_AVAILABILITY_DELAY_MINUTES` | `24` | Data availability delay (minutes) |
@@ -140,6 +139,8 @@ podman run -it --rm --entrypoint="" sunflow bash
 - `--start-time` - Start of a time range in ISO8601 format (use with `--end-time`)
 - `--end-time` - End of a time range in ISO8601 format, inclusive (use with `--start-time`)
 - `--run_mode` - Specify run mode: `download` (fetch from API), `files` (local files), or `s3` (object storage)
+- `--ensemble_members` - Number of ensemble members (Default 1)
+- `--full_ensemble` - Specify that the full ensemble is the desired output rather than ensemble statistics
 
 ## Data Sources
 
