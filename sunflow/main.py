@@ -7,7 +7,6 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 import isodate
-import numpy as np
 import yaml
 from loguru import logger
 from pysteps.motion.lucaskanade import dense_lucaskanade
@@ -23,11 +22,11 @@ from .data_io import (
 )
 from .downloaders import download_past_data
 from .forecast import (
+    compute_ensemble_statistics,
     multiply_clearsky,
     prepend_t0,
     preprocess_data,
     probabilistic_advection_forecast,
-    compute_ensemble_statistics,
 )
 from .geospatial import check_solar_elevation, get_bbox
 from .time_handler import generate_time_steps, round_time
@@ -57,6 +56,7 @@ class RunResult:
 
 # Model version
 model_version = __version__
+
 
 def parse_arguments() -> argparse.Namespace:
     """Parse and validate command line arguments.

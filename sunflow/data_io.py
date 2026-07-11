@@ -488,8 +488,7 @@ def save_forecast(
         for statistic, values in forecast.items():
             if values.ndim != 4:
                 raise ValueError(
-                    "Each statistic array must have shape "
-                    "(ensemble, time, lat, lon)."
+                    "Each statistic array must have shape " "(ensemble, time, lat, lon)."
                 )
 
             if first_shape is None:

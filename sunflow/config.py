@@ -130,9 +130,7 @@ class NowcastConfig:
 def _parse_ensemble_statistics(raw_statistics: str) -> list[str]:
     """Parse and validate requested ensemble statistics from environment."""
     statistics = [
-        token.strip().lower()
-        for token in raw_statistics.split(",")
-        if token.strip()
+        token.strip().lower() for token in raw_statistics.split(",") if token.strip()
     ]
     if not statistics:
         raise ValueError("ENSEMBLE_STATISTICS must contain at least one statistic")

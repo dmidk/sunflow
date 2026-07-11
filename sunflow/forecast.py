@@ -218,6 +218,7 @@ def prepend_t0(
     )
     return solar_forecast
 
+
 def compute_ensemble_statistics(
     forecast: np.ndarray, statistics: list[str]
 ) -> dict[str, np.ndarray]:
