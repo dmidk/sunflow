@@ -3,6 +3,26 @@ import os
 from dataclasses import dataclass
 from typing import Self
 
+DEFAULT_ENSEMBLE_STATISTICS = "median,mean,p10,p25,p75,p90"
+_ALLOWED_STATISTICS = {
+    "median",
+    "mean",
+    "p10",
+    "p25",
+    "p75",
+    "p90",
+    "10th_percentile",
+    "25th_percentile",
+    "75th_percentile",
+    "90th_percentile",
+}
+_STATISTIC_ALIASES = {
+    "10th_percentile": "p10",
+    "25th_percentile": "p25",
+    "75th_percentile": "p75",
+    "90th_percentile": "p90",
+}
+
 # Predefined Bounding Box (BBOX) options
 BBOX_OPTIONS: dict[str, str | None] = {
     "DENMARK": "4,50,18,62",
@@ -54,6 +74,7 @@ class NowcastConfig:
     max_waiting_time_minutes: int
     satellite_data_directory: str
     max_clearsky_fallback_days: int
+    ensemble_statistics: list[str]
 
     @classmethod
     def from_env(cls, ensemble_members: int = 1) -> Self:
@@ -71,6 +92,7 @@ class NowcastConfig:
         - MAX_WAITING_TIME_MINUTES (default: 27)
         - SATELLITE_DATA_DIRECTORY (default: .)
         - MAX_CLEARSKY_FALLBACK_DAYS (default: 3)
+        - ENSEMBLE_STATISTICS (default: median,mean,p10,p25,p75,p90)
         """
 
         ens_members = ensemble_members
@@ -81,6 +103,9 @@ class NowcastConfig:
         # Applied Energy, Volume 351, 2023
         default_alpha = 0.0 if ens_members == 1 else 9.29
         default_beta = 0.0 if ens_members == 1 else 0.17
+        statistics = _parse_ensemble_statistics(
+            os.getenv("ENSEMBLE_STATISTICS", DEFAULT_ENSEMBLE_STATISTICS)
+        )
 
         return cls(
             nowcast_directory=os.getenv("NOWCAST_DIRECTORY", "."),
@@ -98,4 +123,27 @@ class NowcastConfig:
             max_waiting_time_minutes=int(os.getenv("MAX_WAITING_TIME_MINUTES", "27")),
             satellite_data_directory=os.getenv("SATELLITE_DATA_DIRECTORY", "."),
             max_clearsky_fallback_days=int(os.getenv("MAX_CLEARSKY_FALLBACK_DAYS", "3")),
+            ensemble_statistics=statistics,
         )
+
+
+def _parse_ensemble_statistics(raw_statistics: str) -> list[str]:
+    """Parse and validate requested ensemble statistics from environment."""
+    statistics = [
+        token.strip().lower()
+        for token in raw_statistics.split(",")
+        if token.strip()
+    ]
+    if not statistics:
+        raise ValueError("ENSEMBLE_STATISTICS must contain at least one statistic")
+
+    invalid = [stat for stat in statistics if stat not in _ALLOWED_STATISTICS]
+    if invalid:
+        raise ValueError(
+            "Invalid ENSEMBLE_STATISTICS value(s): "
+            f"{', '.join(invalid)}. Allowed values are: "
+            "median, mean, p10, p25, p75, p90, "
+            "10th_percentile, 25th_percentile, 75th_percentile, 90th_percentile"
+        )
+
+    return [_STATISTIC_ALIASES.get(stat, stat) for stat in statistics]

@@ -107,6 +107,7 @@ podman run -it --rm --entrypoint="" sunflow bash
 | `INPUT_DATA_FREQUENCY_MINUTES` | `15` | Data frequency (minutes) |
 | `MAX_WAITING_TIME_MINUTES` | `27` | Maximum wait time for data (minutes) |
 | `MAX_CLEARSKY_FALLBACK_DAYS` | `3` | Days back to search for fallback clear-sky data |
+| `ENSEMBLE_STATISTICS` | `median,mean,p10,p25,p75,p90` | Comma-separated list of statistics for ensemble output. Allowed: `median`, `mean`, `p10`, `p25`, `p75`, `p90` (aliases `10th_percentile`, `25th_percentile`, `75th_percentile`, `90th_percentile` are accepted). |
 
 #### Data Source Configuration
 
@@ -141,6 +142,10 @@ podman run -it --rm --entrypoint="" sunflow bash
 - `--run_mode` - Specify run mode: `download` (fetch from API), `files` (local files), or `s3` (object storage)
 - `--ensemble_members` - Number of ensemble members (Default 1)
 - `--full_ensemble` - Specify that the full ensemble is the desired output rather than ensemble statistics
+
+For ensemble runs (`--ensemble_members > 1`), default output is the configured
+ensemble statistics from `ENSEMBLE_STATISTICS`. Use `--full_ensemble` to output
+all members instead.
 
 ## Data Sources
 

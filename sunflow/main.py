@@ -27,6 +27,7 @@ from .forecast import (
     prepend_t0,
     preprocess_data,
     probabilistic_advection_forecast,
+    compute_ensemble_statistics,
 )
 from .geospatial import check_solar_elevation, get_bbox
 from .time_handler import generate_time_steps, round_time
@@ -56,7 +57,6 @@ class RunResult:
 
 # Model version
 model_version = __version__
-
 
 def parse_arguments() -> argparse.Namespace:
     """Parse and validate command line arguments.
@@ -138,7 +138,7 @@ def parse_arguments() -> argparse.Namespace:
         default=None,
     )
     parser.add_argument(
-        "--ensemble-members",
+        "--ensemble_members",
         type=int,
         default=1,
         help="Number of ensemble members (default: 1)",
@@ -147,8 +147,8 @@ def parse_arguments() -> argparse.Namespace:
         "--full_ensemble",
         action="store_true",
         help=(
-            "Save full ensemble output. By default, the pixel-wise median across "
-            "ensemble members is saved."
+            "Save full ensemble output. By default, ensemble statistics are "
+            "saved for ensemble runs."
         ),
     )
 
@@ -205,7 +205,7 @@ def run_nowcast(
         nowcast_config: NowcastConfig object.
         s3_config: S3Config object.
         full_ensemble: If True, save all ensemble members. If False,
-            save pixel-wise median over ensemble members.
+            save configured ensemble statistics over ensemble members.
         custom_time: If True, skip the retry wait loop on missing data.
 
     Returns:
@@ -371,11 +371,14 @@ def run_nowcast(
                 "(single ensemble member, kept as singleton ensemble dimension)"
             )
         else:
-            output_forecast = np.median(solar_forecast, axis=0, keepdims=True)
-            output_mode = "median"
+            output_forecast = compute_ensemble_statistics(
+                solar_forecast, nowcast_config.ensemble_statistics
+            )
+            output_mode = "ensemble_statistics"
             logger.info(
-                "Saving pixel-wise median forecast across ensemble members "
-                "(with singleton ensemble dimension)"
+                "Saving ensemble statistics across members: "
+                f"{', '.join(nowcast_config.ensemble_statistics)} "
+                "(each with singleton ensemble dimension)"
             )
 
     # Save forecast (now contains actual solar irradiance, not ratios)
@@ -457,7 +460,10 @@ def cli() -> None:
     elif nowcast_config.ens_members == 1:
         logger.info("Output mode: deterministic")
     else:
-        logger.info("Output mode: median")
+        logger.info(
+            "Output mode: ensemble statistics "
+            f"({', '.join(nowcast_config.ensemble_statistics)})"
+        )
     logger.info(
         f"Using probabilistic advection noise parameters alpha={nowcast_config.alpha}, "
         f"beta={nowcast_config.beta}"

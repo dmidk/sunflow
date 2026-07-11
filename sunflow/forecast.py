@@ -217,3 +217,27 @@ def prepend_t0(
         axis=1,
     )
     return solar_forecast
+
+def compute_ensemble_statistics(
+    forecast: np.ndarray, statistics: list[str]
+) -> dict[str, np.ndarray]:
+    """Compute requested statistics over ensemble members (axis 0)."""
+    computed: dict[str, np.ndarray] = {}
+    for statistic in statistics:
+        match statistic:
+            case "median":
+                computed["median"] = np.median(forecast, axis=0, keepdims=True)
+            case "mean":
+                computed["mean"] = np.mean(forecast, axis=0, keepdims=True)
+            case "p10":
+                computed["p10"] = np.percentile(forecast, 10, axis=0, keepdims=True)
+            case "p25":
+                computed["p25"] = np.percentile(forecast, 25, axis=0, keepdims=True)
+            case "p75":
+                computed["p75"] = np.percentile(forecast, 75, axis=0, keepdims=True)
+            case "p90":
+                computed["p90"] = np.percentile(forecast, 90, axis=0, keepdims=True)
+            case _:  # Defensive check; config parsing validates these values.
+                raise ValueError(f"Unsupported ensemble statistic: {statistic}")
+
+    return computed
