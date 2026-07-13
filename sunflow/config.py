@@ -89,8 +89,8 @@ class NowcastConfig:
         Reads the following environment variables:
 
         - NOWCAST_DIRECTORY (default: .)
-        - ALPHA (default: 0.0 for ENS_MEMBERS=1, 9.29 for ENS_MEMBERS>1)
-        - BETA (default: 0.0 for ENS_MEMBERS=1, 0.17 for ENS_MEMBERS>1)
+        - ALPHA (default: 0.0 for ENS_MEMBERS=1, 9.23 for ENS_MEMBERS>1)
+        - BETA (default: 0.0 for ENS_MEMBERS=1, 0.15 for ENS_MEMBERS>1)
         - PAST_STEPS (default: 4)
         - FUTURE_STEPS (default: 24)
         - INPUT_DATA_AVAILABILITY_DELAY_MINUTES (default: 24)
@@ -107,8 +107,8 @@ class NowcastConfig:
         # "Intraday probabilistic forecasts of surface solar radiation with cloud
         # scale-dependent autoregressive advection,"
         # Applied Energy, Volume 351, 2023
-        default_alpha = 0.0 if ens_members == 1 else 9.29
-        default_beta = 0.0 if ens_members == 1 else 0.17
+        default_alpha = 0.0 if ens_members == 1 else 9.23
+        default_beta = 0.0 if ens_members == 1 else 0.15
         statistics = _parse_ensemble_statistics(
             os.getenv("ENSEMBLE_STATISTICS", DEFAULT_ENSEMBLE_STATISTICS)
         )
