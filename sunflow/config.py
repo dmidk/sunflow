@@ -23,12 +23,18 @@ _STATISTIC_ALIASES = {
     "90th_percentile": "p90",
 }
 
-# Predefined Bounding Box (BBOX) options
-BBOX_OPTIONS: dict[str, str | None] = {
+
+# Predefined domain options
+# Format: lon_min,lat_min,lon_max,lat_max
+DOMAIN_OPTIONS: dict[str, str | None] = {
     "DENMARK": "4,50,18,62",
     "NW_EUROPE": "-10.75,47.25,20,63.5",
+    "NW_EUROPE_SATELLITE": "-20.75,37.25,30,73.5",
     "CUSTOM": None,
 }
+
+# Tiny absolute tolerance for floating-point boundary comparisons in degrees.
+COVERAGE_ABS_TOL_DEGREES = 1e-9
 
 
 @dataclass
