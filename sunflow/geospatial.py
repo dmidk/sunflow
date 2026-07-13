@@ -234,10 +234,10 @@ def crop_forecast_to_domain(
     longitudes: np.ndarray,
     domain_bbox: str,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Crop a [time, lat, lon] forecast and its coordinates to a domain bbox.
+    """Crop a forecast and its coordinates to a domain bbox.
 
     Args:
-        forecast: Forecast array with shape [time, lat, lon].
+        forecast: Forecast array with shape [ensemble, time, lat, lon].
         latitudes: 1-D latitude array.
         longitudes: 1-D longitude array.
         domain_bbox: Requested bbox string lon_min,lat_min,lon_max,lat_max.
@@ -246,12 +246,13 @@ def crop_forecast_to_domain(
         Tuple (cropped_forecast, cropped_latitudes, cropped_longitudes).
 
     Raises:
-        RuntimeError: If forecast dimensionality is not [time, lat, lon] or the
+        RuntimeError: If forecast dimensionality is not [ensemble, time, lat, lon] or the
             requested domain has no overlap with the provided coordinates.
     """
-    if forecast.ndim != 3:
+    if forecast.ndim != 4:
         raise RuntimeError(
-            f"Expected forecast shape [time, lat, lon], got {forecast.shape}."
+            "Expected forecast shape [ensemble, time, lat, lon], "
+            f"got {forecast.shape}."
         )
 
     lon_min, lat_min, lon_max, lat_max = parse_bbox(domain_bbox)
@@ -278,7 +279,7 @@ def crop_forecast_to_domain(
             f"Requested domain_nowcast={domain_bbox} does not overlap forecast grid."
         )
 
-    cropped_forecast = forecast[:, lat_idx, :][:, :, lon_idx]
+    cropped_forecast = forecast[:, :, lat_idx, :][:, :, :, lon_idx]
     return cropped_forecast, latitudes[lat_idx], longitudes[lon_idx]
 
 

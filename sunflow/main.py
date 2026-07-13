@@ -28,7 +28,6 @@ from .forecast import (
     preprocess_data,
     probabilistic_advection_forecast,
 )
-
 from .geospatial import (
     check_solar_elevation,
     crop_forecast_to_domain,
@@ -402,20 +401,34 @@ def run_nowcast(
     )
 
     if full_ensemble:
-        output_forecast = solar_forecast
+        output_forecast, latitudes, longitudes = crop_forecast_to_domain(
+            solar_forecast,
+            latitudes,
+            longitudes,
+            domain_nowcast,
+        )
         output_mode = "full_ensemble"
         logger.info("Saving full ensemble forecast")
     else:
         if solar_forecast.shape[0] == 1:
-            output_forecast = solar_forecast
+            output_forecast, latitudes, longitudes = crop_forecast_to_domain(
+                solar_forecast,
+                latitudes,
+                longitudes,
+                domain_nowcast,
+            )
             output_mode = "deterministic"
             logger.info(
                 "Saving deterministic forecast "
                 "(single ensemble member, kept as singleton ensemble dimension)"
             )
         else:
-            output_forecast = compute_ensemble_statistics(
-                solar_forecast, nowcast_config.ensemble_statistics
+            output_forecast, latitudes, longitudes = compute_ensemble_statistics(
+                solar_forecast,
+                nowcast_config.ensemble_statistics,
+                latitudes,
+                longitudes,
+                domain_nowcast,
             )
             output_mode = "ensemble_statistics"
             logger.info(
@@ -423,13 +436,6 @@ def run_nowcast(
                 f"{', '.join(nowcast_config.ensemble_statistics)} "
                 "(each with singleton ensemble dimension)"
             )
-
-    solar_forecast, latitudes, longitudes = crop_forecast_to_domain(
-        solar_forecast,
-        latitudes,
-        longitudes,
-        domain_nowcast,
-    )
 
     # Save forecast (now contains actual solar irradiance, not ratios)
     filename = save_forecast(
