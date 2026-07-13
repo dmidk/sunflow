@@ -10,6 +10,9 @@ import pandas as pd
 import xarray as xr
 from loguru import logger
 
+from .geospatial import parse_bbox
+
+
 class MissingClearskyDataError(RuntimeError):
     pass
 
