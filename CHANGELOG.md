@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added support for running an ensemble. Default output is ensemble statistics, but --full_ensemble can be specified [!17](https://github.com/dmidk/sunflow/pull/17), @KristianHMoller
 - Added support for using a different, smaller output domain than the satellite input domain [!10](https://github.com/dmidk/sunflow/pull/10), @KristianHMoller
 - Added a check for the number of ensemble members, as the code currently supports only one [!13](https://github.com/dmidk/sunflow/pull/13), @KristianHMoller
 - Subsetting to bounding box is now also done in the `s3` and `files` code paths [!11](https://github.com/dmidk/sunflow/pull/11), @JoachimKoenigslieb
@@ -16,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Change number of ensemble members from being read from environment variable to being a CLI argument. [!17](https://github.com/dmidk/sunflow/pull/17), @KristianHMoller
+- Ensemble output statistics are now configurable via the `ENSEMBLE_STATISTICS` environment variable, and selected statistics are written as separate NetCDF variables. [!17](https://github.com/dmidk/sunflow/pull/17), @KristianHMoller
 - Modified subset_to_bbox function to slice based on edges rather than centers [!10](https://github.com/dmidk/sunflow/pull/10), @KristianHMoller
 - Pass down number of ensembles from configurations to `ProbabilisticAdvection`. This gives a roughly 3x speedup in the no ensembles case [!12](https://github.com/dmidk/sunflow/pull/12), @JoachimKoenigslieb
 

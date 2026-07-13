@@ -459,7 +459,7 @@ def fetch_clearsky_with_fallback(
 
 
 def save_forecast(
-    forecast: np.ndarray,
+    forecast: np.ndarray | dict[str, np.ndarray],
     time_step: datetime,
     n_steps: int,
     latitudes: np.ndarray,
@@ -467,26 +467,30 @@ def save_forecast(
     dataset_name: str,
     nowcast_config: NowcastConfig,
     model_version: str,
+    output_mode: str,
     run_mode: str = "files",
     s3_config: S3Config | None = None,
 ) -> str:
-    """Save forecast array to a CF-compliant NetCDF4 file.
+    """Save forecast data to a CF-compliant NetCDF4 file.
 
     Writes the probabilistic advection forecast to either a local file or S3,
     depending on `run_mode`. The time coordinate is stored as CF-convention
     numeric values (float64, minutes since the forecast reference time).
 
     Args:
-        forecast: Forecast array, shape [time, lat, lon] or
-            [ensemble, time, lat, lon].
+        forecast: Forecast array with shape [ensemble, time, lat, lon],
+            or mapping of statistic name to arrays with the same shape.
         time_step: Forecast reference time (start of the forecast window).
         n_steps: Number of forecast time steps to write.
         latitudes: 1-D array of latitude values (degrees).
         longitudes: 1-D array of longitude values (degrees).
         dataset_name: Name of the source dataset (options: KNMI, DWD).
-        nowcast_config: NowcastConfig object supplying output directory,
-            ensemble size, and input data frequency.
+        nowcast_config: NowcastConfig object supplying output directory
+            and input data frequency.
         model_version: Model version string written as a global attribute.
+        output_mode: Output aggregation mode label written to global
+            NetCDF attrs (expected: 'deterministic', 'ensemble_statistics',
+            or 'full_ensemble').
         run_mode: One of 'files' (local) or 's3'. Defaults to 'files'.
         s3_config: S3Config object; required when run_mode is 's3'.
 
@@ -494,12 +498,59 @@ def save_forecast(
         Filename (basename only) of the written NetCDF file.
     """
     input_data_frequency_minutes = nowcast_config.input_data_frequency_minutes
-    ens_members = nowcast_config.ens_members
     filename = f"SolarNowcast_{time_step.strftime('%Y%m%d%H%M')}.nc"
 
-    # Add ensemble dimension if needed (forecast should be [ensemble, time, lat, lon])
-    if forecast.ndim == 3:
-        forecast = forecast[np.newaxis, :, :, :]  # Now [1, time, lat, lon]
+    data_vars: dict[str, tuple[list[str], np.ndarray, dict[str, str]]]
+    statistics_attr = ""
+
+    if isinstance(forecast, dict):
+        if not forecast:
+            raise ValueError("forecast statistics mapping cannot be empty")
+
+        data_vars = {}
+        first_shape: tuple[int, ...] | None = None
+        for statistic, values in forecast.items():
+            if values.ndim != 4:
+                raise ValueError(
+                    "Each statistic array must have shape " "(ensemble, time, lat, lon)."
+                )
+
+            if first_shape is None:
+                first_shape = values.shape
+            elif values.shape != first_shape:
+                raise ValueError("All statistic arrays must share the same shape")
+
+            variable_name = f"GHI_probabilistic_advection_{statistic}"
+            data_vars[variable_name] = (
+                ["ensemble", "time", "lat", "lon"],
+                values,
+                {
+                    "description": (
+                        f"Probabilistic advection solar forecast ({statistic})"
+                    ),
+                    "long_name": "Surface downwelling solar radiation",
+                    "units": "W m-2",
+                },
+            )
+
+        ens_members = first_shape[0] if first_shape is not None else 0
+        statistics_attr = ",".join(forecast.keys())
+    else:
+        if forecast.ndim != 4:
+            raise ValueError("forecast must have shape (ensemble, time, lat, lon).")
+
+        ens_members = forecast.shape[0]
+        data_vars = {
+            "GHI_probabilistic_advection": (
+                ["ensemble", "time", "lat", "lon"],
+                forecast,
+                {
+                    "description": "Probabilistic advection solar forecast",
+                    "long_name": "Surface downwelling solar radiation",
+                    "units": "W m-2",
+                },
+            ),
+        }
 
     # Build time coordinate (CF-convention: minutes since forecast reference time)
 
@@ -511,17 +562,7 @@ def save_forecast(
     ]
 
     ds = xr.Dataset(
-        {
-            "probabilistic_advection": (
-                ["ensemble", "time", "lat", "lon"],
-                forecast,
-                {
-                    "description": "Probabilistic advection solar forecast",
-                    "long_name": "Surface downwelling solar radiation",
-                    "units": "W m-2",
-                },
-            ),
-        },
+        data_vars,
         coords={
             "time": (
                 ["time"],
@@ -549,11 +590,13 @@ def save_forecast(
                 f"Simple Probabilistic Advection solar forecast "
                 f"using {dataset_name} data"
             ),
+            "output_mode": output_mode,
             "history": (
                 f"Created "
                 f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC"
             ),
             "model_version": model_version,
+            **({"statistics": statistics_attr} if statistics_attr else {}),
         },
     )
 

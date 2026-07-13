@@ -7,7 +7,6 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 import isodate
-import numpy as np
 import yaml
 from loguru import logger
 from pysteps.motion.lucaskanade import dense_lucaskanade
@@ -22,7 +21,13 @@ from .data_io import (
     save_forecast,
 )
 from .downloaders import download_past_data
-from .forecast import multiply_clearsky, preprocess_data, simple_advection_forecast
+from .forecast import (
+    compute_ensemble_statistics,
+    multiply_clearsky,
+    prepend_t0,
+    preprocess_data,
+    probabilistic_advection_forecast,
+)
 from .geospatial import (
     check_solar_elevation,
     crop_forecast_to_domain,
@@ -38,7 +43,6 @@ from .validation import (
     validate_config,
     validate_custom_domain,
     validate_data_shape,
-    validate_nowcast_config,
     validate_run_mode,
     verify_environment_variables,
 )
@@ -156,6 +160,20 @@ def parse_arguments() -> argparse.Namespace:
         help="End of time span in ISO8601 format (inclusive). Use with --start_time.",
         default=None,
     )
+    parser.add_argument(
+        "--ensemble_members",
+        type=int,
+        default=1,
+        help="Number of ensemble members (default: 1)",
+    )
+    parser.add_argument(
+        "--full_ensemble",
+        action="store_true",
+        help=(
+            "Save full ensemble output. By default, ensemble statistics are "
+            "saved for ensemble runs."
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -199,6 +217,7 @@ def run_nowcast(
     domain_satellite_name: str,
     nowcast_config: NowcastConfig,
     s3_config: S3Config,
+    full_ensemble: bool = False,
     custom_time: bool = True,
 ) -> RunResult:
     """Run a single nowcast for the given (already-rounded) time step.
@@ -213,6 +232,8 @@ def run_nowcast(
         domain_satellite_name: Domain identifier used for input filenames.
         nowcast_config: NowcastConfig object.
         s3_config: S3Config object.
+        full_ensemble: If True, save all ensemble members. If False,
+            save configured ensemble statistics over ensemble members.
         custom_time: If True, skip the retry wait loop on missing data.
 
     Returns:
@@ -309,12 +330,14 @@ def run_nowcast(
     # Compute motion field
     motion_field = dense_lucaskanade(ratio_data)
 
-    # Simple forecast (ratio forecast)
-    ratio_forecast = simple_advection_forecast(
+    # Probabilistic advection forecast (ratio forecast)
+    ratio_forecast = probabilistic_advection_forecast(
         ratio_data,
         motion_field,
         nowcast_config.future_steps,
         ens_members=nowcast_config.ens_members,
+        alpha=nowcast_config.alpha,
+        beta=nowcast_config.beta,
     )
 
     # Generate previous day time steps for clearsky lookup
@@ -373,23 +396,50 @@ def run_nowcast(
         config["nc_variable_names"],
     )
 
-    # Prepend timestep 0: current observation (ratio_data[-1]) × clearsky at t=0
-    sds_cs_t0 = clearsky_data.sel(time=clearsky_t0_time.replace(tzinfo=None))[
-        config["nc_variable_names"]["sds_cs"]
-    ].values
-    solar_t0 = ratio_data[-1] * sds_cs_t0
-    solar_forecast = np.concatenate([solar_t0[np.newaxis, :, :], solar_forecast], axis=0)
-
-    solar_forecast, latitudes, longitudes = crop_forecast_to_domain(
-        solar_forecast,
-        latitudes,
-        longitudes,
-        domain_nowcast,
+    solar_forecast = prepend_t0(
+        clearsky_data, ratio_data, solar_forecast, config, clearsky_t0_time
     )
+
+    if full_ensemble:
+        output_forecast, latitudes, longitudes = crop_forecast_to_domain(
+            solar_forecast,
+            latitudes,
+            longitudes,
+            domain_nowcast,
+        )
+        output_mode = "full_ensemble"
+        logger.info("Saving full ensemble forecast")
+    else:
+        if solar_forecast.shape[0] == 1:
+            output_forecast, latitudes, longitudes = crop_forecast_to_domain(
+                solar_forecast,
+                latitudes,
+                longitudes,
+                domain_nowcast,
+            )
+            output_mode = "deterministic"
+            logger.info(
+                "Saving deterministic forecast "
+                "(single ensemble member, kept as singleton ensemble dimension)"
+            )
+        else:
+            output_forecast, latitudes, longitudes = compute_ensemble_statistics(
+                solar_forecast,
+                nowcast_config.ensemble_statistics,
+                latitudes,
+                longitudes,
+                domain_nowcast,
+            )
+            output_mode = "ensemble_statistics"
+            logger.info(
+                "Saving ensemble statistics across members: "
+                f"{', '.join(nowcast_config.ensemble_statistics)} "
+                "(each with singleton ensemble dimension)"
+            )
 
     # Save forecast (now contains actual solar irradiance, not ratios)
     filename = save_forecast(
-        solar_forecast,
+        output_forecast,
         time_step,
         nowcast_config.future_steps + 1,  # +1 for the t=0 analysis step
         latitudes,
@@ -397,6 +447,7 @@ def run_nowcast(
         dataset_name,
         nowcast_config,
         model_version,
+        output_mode,
         run_mode,
         s3_config,
     )
@@ -442,9 +493,9 @@ def cli() -> None:
     )
 
     # Load configuration
-    nowcast_config = NowcastConfig.from_env()
-    s3_config = S3Config.from_env()
     args = parse_arguments()
+    nowcast_config = NowcastConfig.from_env(ensemble_members=args.ensemble_members)
+    s3_config = S3Config.from_env()
 
     run_mode = args.run_mode
     dataset_name = args.dataset
@@ -490,10 +541,33 @@ def cli() -> None:
     logger.info(f"Using {dataset_name} dataset")
     logger.info(f"Using satellite domain {domain_satellite_name}: {domain_satellite}")
     logger.info(f"Using nowcast domain {domain_nowcast_name}: {domain_nowcast}")
+    logger.info(f"Number of ensemble members: {nowcast_config.ens_members}")
+    if args.full_ensemble:
+        logger.info("Output mode: full ensemble")
+    elif nowcast_config.ens_members == 1:
+        logger.info("Output mode: deterministic")
+    else:
+        logger.info(
+            "Output mode: ensemble statistics "
+            f"({', '.join(nowcast_config.ensemble_statistics)})"
+        )
+    logger.info(
+        f"Using probabilistic advection noise parameters alpha={nowcast_config.alpha}, "
+        f"beta={nowcast_config.beta}"
+    )
+
+    if nowcast_config.ens_members == 1 and (
+        nowcast_config.alpha != 0.0 or nowcast_config.beta != 0.0
+    ):
+        logger.warning(
+            "Running with a single ensemble member, but non-zero probabilistic advection"
+            "noise parameters alpha and/or beta. This is generally not recommended as it"
+            "simply adds noise to the nowcast without providing any ensemble spread. "
+            "Consider setting alpha=0.0 and beta=0.0 for a single-member run."
+        )
 
     validate_run_mode(run_mode, dataset_name)
     validate_config(config, dataset_name)
-    validate_nowcast_config(nowcast_config)
     verify_environment_variables(run_mode, dataset_name)
 
     # Determine the time steps to run
@@ -545,6 +619,7 @@ def cli() -> None:
                 domain_satellite_name,
                 nowcast_config,
                 s3_config,
+                full_ensemble=args.full_ensemble,
                 custom_time=custom_time,
             )
             results.append(result)
