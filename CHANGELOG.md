@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Update SolarSTEPS dependency to use the version with arctan2 [!19](https://github.com/dmidk/sunflow/pull/19), @KristianHMoller
 - Modified subset_to_bbox function to slice based on edges rather than centers [!10](https://github.com/dmidk/sunflow/pull/10), @KristianHMoller
 - Pass down number of ensembles from configurations to `ProbabilisticAdvection`. This gives a roughly 3x speedup in the no ensembles case [!12](https://github.com/dmidk/sunflow/pull/12), @JoachimKoenigslieb
 
