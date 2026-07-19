@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Change number of ensemble members from being read from environment variable to being a CLI argument. [!17](https://github.com/dmidk/sunflow/pull/17), @KristianHMoller
 - Ensemble output statistics are now configurable via the `ENSEMBLE_STATISTICS` environment variable, and selected statistics are written as separate NetCDF variables. [!17](https://github.com/dmidk/sunflow/pull/17), @KristianHMoller
+- Update SolarSTEPS dependency to use the version with arctan2 [!19](https://github.com/dmidk/sunflow/pull/19), @KristianHMoller
 - Modified subset_to_bbox function to slice based on edges rather than centers [!10](https://github.com/dmidk/sunflow/pull/10), @KristianHMoller
 - Pass down number of ensembles from configurations to `ProbabilisticAdvection`. This gives a roughly 3x speedup in the no ensembles case [!12](https://github.com/dmidk/sunflow/pull/12), @JoachimKoenigslieb
 
