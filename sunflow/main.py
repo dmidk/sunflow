@@ -23,7 +23,6 @@ from .data_io import (
 )
 from .downloaders import download_past_data
 from .forecast import (
-    PVLIB_CLEARSKY_VARIABLE_NAME,
     make_pvlib_clearsky_dataset,
     multiply_clearsky,
     preprocess_data,
@@ -200,9 +199,10 @@ def run_nowcast(
     time_step_str = time_step.strftime("%Y-%m-%dT%H:%M:%SZ")
     logger.info(f"--- Running nowcast for {time_step_str} ---")
     nc_variable_names = config["nc_variable_names"].copy()
-    clearsky_source = config.get("clearsky_source", "file")
-    if clearsky_source == "pvlib":
-        nc_variable_names["sds_cs"] = PVLIB_CLEARSKY_VARIABLE_NAME
+    clearsky_config = config.get(
+        "clearsky",
+        {"method": "file", "path": config["filename_format"]},
+    )
 
     # Fetch current data (with retry loop in operational mode)
     fetch_current_data_with_retry(
@@ -226,7 +226,7 @@ def run_nowcast(
             for lon in (lon_min, lon_max)
         )
         logger.info(f"Maximum corner solar elevation: {solar_elevation:.2f} degrees")
-        if solar_elevation < 1:
+        if solar_elevation < nowcast_config.min_solar_elevation_degrees:
             reason = "sun too low"
             logger.warning(f"{reason.capitalize()}. Skipping.\n")
             return RunResult(
@@ -276,15 +276,31 @@ def run_nowcast(
     if n_loaded == 0:
         raise RuntimeError("No past data loaded. Cannot proceed.")
 
-    if clearsky_source == "pvlib":
+    if clearsky_config["method"] == "pvlib":
         latitudes, longitudes = get_coordinates(data)
         data = data.merge(
             make_pvlib_clearsky_dataset(
                 past_time_steps,
                 latitudes,
                 longitudes,
+                nc_variable_names["sds_cs"],
             )
         )
+    elif clearsky_config["path"] != config["filename_format"]:
+        logger.info("Loading separate clearsky data for past observations...")
+        clearsky_data = fetch_clearsky_with_fallback(
+            past_time_steps,
+            run_mode,
+            nowcast_config.max_clearsky_fallback_days,
+            clearsky_config["path"],
+            config,
+            bbox,
+            dataset_name,
+            bbox_choice,
+            nowcast_config,
+            s3_config,
+        )
+        data = data.merge(clearsky_data[[nc_variable_names["sds_cs"]]])
 
     # Preprocess
     logger.info("Preprocessing data...")
@@ -319,12 +335,13 @@ def run_nowcast(
     clearsky_t0_time = time_step - timedelta(days=1)
     all_clearsky_time_steps = [clearsky_t0_time] + previous_day_time_steps
 
-    if clearsky_source == "pvlib":
+    if clearsky_config["method"] == "pvlib":
         logger.info("Generating pvlib clearsky data...")
         clearsky_data = make_pvlib_clearsky_dataset(
             all_clearsky_time_steps,
             latitudes,
             longitudes,
+            nc_variable_names["sds_cs"],
         )
     else:
         # Fetch clearsky data with fallback to earlier days if a file is missing
@@ -333,6 +350,7 @@ def run_nowcast(
             all_clearsky_time_steps,
             run_mode,
             nowcast_config.max_clearsky_fallback_days,
+            clearsky_config["path"],
             config,
             bbox,
             dataset_name,

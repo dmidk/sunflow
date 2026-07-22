@@ -22,6 +22,7 @@ KNMI:
   #   {month}: Two-digit month (e.g., 03)
   #   {day}: Two-digit day of month (e.g., 09)
   #   {hour}: Two-digit hour (e.g., 12)
+  #   {seconds}: Two-digit seconds (e.g., 00)
   # Path separators are supported, e.g.: "{year}/{month}/{day}/{dataset_name}_{timestamp}.nc"
 
 DWD:

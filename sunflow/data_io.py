@@ -134,6 +134,7 @@ def generate_input_filename(
         {day}: Two-digit day (e.g. 09)
         {hour}: Two-digit hour (e.g. 12)
         {minute}: Two-digit minute (e.g. 30)
+        {seconds}: Two-digit seconds (e.g. 00)
 
     Path separators in the result are supported, so a format like
     ``{year}/{month}/{day}/{dataset_name}_{timestamp}.nc`` resolves to a
@@ -156,6 +157,7 @@ def generate_input_filename(
         day=time_step.strftime("%d"),
         hour=time_step.strftime("%H"),
         minute=time_step.strftime("%M"),
+        seconds=time_step.strftime("%S"),
     )
     return filename
 
@@ -347,6 +349,7 @@ def fetch_clearsky_with_fallback(
     time_steps: list[datetime],
     run_mode: str,
     max_fallback_days: int,
+    filename_format: str,
     config: dict[str, Any],
     bbox: str,
     dataset_name: str,
@@ -365,6 +368,7 @@ def fetch_clearsky_with_fallback(
         time_steps: Requested clearsky times (typically forecast times - 1 day).
         run_mode: One of 'download', 'files', or 's3'.
         max_fallback_days: Maximum number of days back to search per time step.
+        filename_format: Template string for clear-sky files.
         config: Dataset configuration dict.
         bbox: Bounding box string.
         dataset_name: Name of dataset (options: KNMI, DWD).
@@ -406,7 +410,7 @@ def fetch_clearsky_with_fallback(
                             bbox_choice,
                             nowcast_config.satellite_data_directory,
                             "clearsky data",
-                            config["filename_format"],
+                            filename_format,
                             bbox=bbox,
                         )
                     case "s3":
@@ -416,7 +420,7 @@ def fetch_clearsky_with_fallback(
                             bbox_choice,
                             s3_config,
                             "clearsky data",
-                            config["filename_format"],
+                            filename_format,
                             bbox=bbox,
                         )
 

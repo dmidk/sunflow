@@ -6,10 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-* Made minutes available for formatting file names, @JoachimKoenigslieb
-- use `.expand_dims` instead of `.assign_coords` to make sure we have both time dimension and time coordinates when loading from files, @JoachimKoenigslieb
-- Added a helper `make_pvlib_clearsky_dataset` which creates clearsky data by calling `pvlib`. Also added a new config variable `clearsky_source` which defaults to `file` and switches behavior when set to `pvlib`, @JoachimKoenigslieb
-- `check_solar_elevation` now does not assume location is in Copenhagen by default, @JoachimKoenigslieb
+- Made minutes available for formatting file names [!15](https://github.com/dmidk/sunflow/pull/15), @JoachimKoenigslieb
+- Added `{seconds}` as a filename formatting variable [!15](https://github.com/dmidk/sunflow/pull/15), @JoachimKoenigslieb
+- Use `.expand_dims` instead of `.assign_coords` to make sure we have both time dimension and time coordinates when loading from files [!15](https://github.com/dmidk/sunflow/pull/15), @JoachimKoenigslieb
+- Added a `clearsky` config object which can load clear-sky data from files via `clearsky.path` or generate it with `pvlib` via the `simplified_solis` method [!15](https://github.com/dmidk/sunflow/pull/15), @JoachimKoenigslieb
+- `check_solar_elevation` now does not assume location is in Copenhagen by default [!15](https://github.com/dmidk/sunflow/pull/15), @JoachimKoenigslieb
+- Added `MIN_SOLAR_ELEVATION_DEGREES` (defaulting to 6 degrees) to configure the minimum maximum-corner solar elevation required to run [!15](https://github.com/dmidk/sunflow/pull/15), @JoachimKoenigslieb
 
 
 ### Added

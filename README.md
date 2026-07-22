@@ -108,6 +108,7 @@ podman run -it --rm --entrypoint="" sunflow bash
 | `INPUT_DATA_FREQUENCY_MINUTES` | `15` | Data frequency (minutes) |
 | `MAX_WAITING_TIME_MINUTES` | `27` | Maximum wait time for data (minutes) |
 | `MAX_CLEARSKY_FALLBACK_DAYS` | `3` | Days back to search for fallback clear-sky data |
+| `MIN_SOLAR_ELEVATION_DEGREES` | `6` | Minimum maximum-corner solar elevation required to run |
 
 #### Data Source Configuration
 

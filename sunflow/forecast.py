@@ -2,20 +2,18 @@
 from datetime import datetime
 
 import numpy as np
-import pandas as pd
 import pvlib
 import xarray as xr
 from Models.ProbabilisticAdvection import ProbabilisticAdvection
 
 from .geospatial import get_coordinates
 
-PVLIB_CLEARSKY_VARIABLE_NAME = "pvlib_clearsky_ghi"
-
 
 def make_pvlib_clearsky_dataset(
     times: list[datetime],
     latitudes: np.ndarray,
     longitudes: np.ndarray,
+    variable_name: str,
 ) -> xr.Dataset:
     """Compute a pvlib simplified-Solis clear-sky GHI dataset on a lat/lon grid.
 
@@ -51,14 +49,14 @@ def make_pvlib_clearsky_dataset(
             repeated_times,
             flat_latitudes,
             flat_longitudes,
-            method='nrel_numpy',
+            method="nrel_numpy",
         )
         clearsky = pvlib.clearsky.simplified_solis(solar_position["apparent_elevation"])
         fields.append(clearsky["ghi"].to_numpy().reshape(lat_grid.shape))
 
     return xr.Dataset(
         {
-            PVLIB_CLEARSKY_VARIABLE_NAME: (
+            variable_name: (
                 ["time", "latitude", "longitude"],
                 np.stack(fields),
             )
