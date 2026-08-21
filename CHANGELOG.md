@@ -6,12 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added
+
+- Added checks of invalid configuration combinations [!22](https://github.com/dmidk/sunflow/pull/22), @KristianHMoller
 - Added `{second}` and `{munite}` as a filename formatting variable [!15](https://github.com/dmidk/sunflow/pull/15), @JoachimKoenigslieb
-- Use `.expand_dims` instead of `.assign_coords` to make sure we have both time dimension and time coordinates when loading from files [!15](https://github.com/dmidk/sunflow/pull/15), @JoachimKoenigslieb
 - Added a `clearsky` config object which can load clear-sky data from files via `clearsky.path` or generate it with `pvlib` via the `simplified_solis` method [!15](https://github.com/dmidk/sunflow/pull/15), @JoachimKoenigslieb
-- `check_solar_elevation` now does not assume location is in Copenhagen by default [!15](https://github.com/dmidk/sunflow/pull/15), @JoachimKoenigslieb
 - Added `MIN_SOLAR_ELEVATION_DEGREES` (defaulting to 6 degrees) to configure the minimum maximum-corner solar elevation required to run [!15](https://github.com/dmidk/sunflow/pull/15), @JoachimKoenigslieb
 
+### Changed
+
+- Use `.expand_dims` instead of `.assign_coords` to make sure we have both time dimension and time coordinates when loading from files [!15](https://github.com/dmidk/sunflow/pull/15), @JoachimKoenigslieb
+- `check_solar_elevation` now does not assume location is in Copenhagen by default [!15](https://github.com/dmidk/sunflow/pull/15), @JoachimKoenigslieb
 
 ## [v1.2.0]
 

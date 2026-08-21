@@ -5,6 +5,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
+from typing import Any
 
 import isodate
 import numpy as np
@@ -221,6 +222,7 @@ def run_nowcast(
     domain_satellite_name: str,
     nowcast_config: NowcastConfig,
     s3_config: S3Config,
+    clearsky_config: dict[str, Any],
     full_ensemble: bool = False,
     custom_time: bool = True,
 ) -> RunResult:
@@ -236,6 +238,7 @@ def run_nowcast(
         domain_satellite_name: Domain identifier used for input filenames.
         nowcast_config: NowcastConfig object.
         s3_config: S3Config object.
+        clearsky_config: Clearsky configuration dict.
         full_ensemble: If True, save all ensemble members. If False,
             save configured ensemble statistics over ensemble members.
         custom_time: If True, skip the retry wait loop on missing data.
@@ -247,10 +250,6 @@ def run_nowcast(
     time_step_str = time_step.strftime("%Y-%m-%dT%H:%M:%SZ")
     logger.info(f"--- Running nowcast for {time_step_str} ---")
     nc_variable_names = config["nc_variable_names"].copy()
-    clearsky_config = config.get(
-        "clearsky",
-        {"method": "file", "path": config["filename_format"]},
-    )
 
     # Fetch current data (with retry loop in operational mode)
     fetch_current_data_with_retry(
@@ -349,7 +348,7 @@ def run_nowcast(
             nowcast_config.max_clearsky_fallback_days,
             clearsky_config["path"],
             config,
-            domain_nowcast,
+            domain_satellite,
             dataset_name,
             domain_satellite_name,
             nowcast_config,
@@ -553,14 +552,20 @@ def cli() -> None:
         f"Starting solarnowcasting.main (with configuration version: {model_version})..."
     )
 
-    # Load configuration
     args = parse_arguments()
-    nowcast_config = NowcastConfig.from_env(ensemble_members=args.ensemble_members)
-    s3_config = S3Config.from_env()
-
     run_mode = args.run_mode
     dataset_name = args.dataset
     domain_satellite_name = args.domain_satellite
+
+    # Load configurations
+    nowcast_config = NowcastConfig.from_env(ensemble_members=args.ensemble_members)
+    s3_config = S3Config.from_env()
+    config = yaml.safe_load(open("config.yaml"))[dataset_name]
+    clearsky_config = config.get(
+        "clearsky",
+        {"method": "file", "path": config["filename_format"]},
+    )
+
     domain_satellite = resolve_domain_bbox(
         domain_satellite_name,
         args.custom_domain_satellite,
@@ -592,8 +597,6 @@ def cli() -> None:
             f"Got domain_satellite={domain_satellite}, "
             f"domain_nowcast={domain_nowcast}."
         )
-
-    config = yaml.safe_load(open("config.yaml"))[dataset_name]
 
     if run_mode != "s3":
         os.makedirs(nowcast_config.nowcast_directory, exist_ok=True)
@@ -627,7 +630,7 @@ def cli() -> None:
             "Consider setting alpha=0.0 and beta=0.0 for a single-member run."
         )
 
-    validate_run_mode(run_mode, dataset_name)
+    validate_run_mode(run_mode, dataset_name, clearsky_config)
     validate_config(config, dataset_name)
     validate_nowcast_config(nowcast_config)
     verify_environment_variables(run_mode, dataset_name)
@@ -681,6 +684,7 @@ def cli() -> None:
                 domain_satellite_name,
                 nowcast_config,
                 s3_config,
+                clearsky_config,
                 full_ensemble=args.full_ensemble,
                 custom_time=custom_time,
             )

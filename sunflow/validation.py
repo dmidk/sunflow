@@ -91,7 +91,9 @@ def validate_nowcast_config(nowcast_config: NowcastConfig) -> None:
         sys.exit(1)
 
 
-def validate_run_mode(run_mode: str, dataset_name: str) -> None:
+def validate_run_mode(
+    run_mode: str, dataset_name: str, clearsky_config: dict[str, Any]
+) -> None:
     """Validate that the run mode is compatible with the dataset.
 
     Exits immediately if the combination of run mode and dataset name
@@ -100,6 +102,7 @@ def validate_run_mode(run_mode: str, dataset_name: str) -> None:
     Args:
         run_mode: The requested run mode ('download', 'files', or 's3').
         dataset_name: Name of the dataset.
+        clearsky_config: Clearsky configuration dictionary.
 
     Raises:
         SystemExit: If the run mode is incompatible with the dataset.
@@ -108,6 +111,13 @@ def validate_run_mode(run_mode: str, dataset_name: str) -> None:
         logger.error(
             "Currently data from DWD is only available online for about half a day. "
             "Thus, run_mode 'download' is not supported for dataset 'DWD'. "
+            "Use run_mode 'files' or 's3' instead. Exiting.\n"
+        )
+        sys.exit(1)
+    if run_mode == "download" and clearsky_config["method"] == "pvlib":
+        logger.error(
+            "Currently the pvlib clearsky method is not supported "
+            "for run_mode 'download'. "
             "Use run_mode 'files' or 's3' instead. Exiting.\n"
         )
         sys.exit(1)

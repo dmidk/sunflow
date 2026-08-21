@@ -117,6 +117,11 @@ def download_current_data(
         merged_ds = subset_to_bbox(ds, bbox)
         current_time = merged_ds.time.values[0]
 
+    else:
+        raise ValueError(
+            f"Unsupported dataset_name: {dataset_name} " f"for run_mode 'download'"
+        )
+
     # Save data
     current_time_dt = current_time.astype("datetime64[s]").astype(datetime)
     filename = generate_input_filename(
