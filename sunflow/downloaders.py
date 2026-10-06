@@ -91,11 +91,11 @@ def download_current_data(
         config: Dataset configuration dict from config.yaml, including
             base_url, variables, format, crs, and filename_format.
         bbox: Bounding box string lon_min,lat_min,lon_max,lat_max.
-        dataset_name: Name of the dataset source (options: KNMI, DWD).
+        dataset_name: Name of the dataset source.
         domain_satellite_name: Satellite domain identifier used in the output filename.
         satellite_data_directory: Directory where the NetCDF file is saved.
     """
-    if dataset_name == "KNMI":
+    if dataset_name in ["KNMI_MSG", "KNMI_MTG"]:
         datasets = []
         for variable in config["variables"]:
             url = (
@@ -149,7 +149,7 @@ def download_past_data(
         time_steps: Ordered list of datetimes to download.
         config: Dataset configuration dict from config.yaml.
         bbox: Bounding box string lon_min,lat_min,lon_max,lat_max.
-        dataset_name: Name of the dataset source (options: KNMI, DWD).
+        dataset_name: Name of the dataset source.
 
     Returns:
         xarray Dataset concatenated along a 'time' dimension, with one
@@ -160,7 +160,7 @@ def download_past_data(
     for time_step in time_steps:
         time_str = time_step.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        if dataset_name == "KNMI":
+        if dataset_name in ["KNMI_MSG", "KNMI_MTG"]:
             # Download each variable separately, then merge
             var_datasets: list[xr.Dataset] = []
             failed_vars = []
@@ -170,6 +170,7 @@ def download_past_data(
                     f"&CRS={config['crs']}&BBOX={bbox}&time={time_str}"
                 )
                 url = f"{base_url}&coverage={var}"
+                logger.info(f"Downloading {var} for {time_str} from {url}")
                 try:
                     netcdf_file = download_netcdf_knmi(url, os.getenv("KNMI_API_KEY"))
                     ds = xr.open_dataset(netcdf_file, engine="h5netcdf")
@@ -231,7 +232,7 @@ def download_clearsky_data(
             (typically forecast lead times offset by one day).
         config: Dataset configuration dict from config.yaml.
         bbox: Bounding box string lon_min,lat_min,lon_max,lat_max.
-        dataset_name: Name of the dataset source (options: KNMI, DWD).
+        dataset_name: Name of the dataset source.
 
     Returns:
         xarray Dataset concatenated along a 'time' dimension, with one
@@ -239,7 +240,7 @@ def download_clearsky_data(
     """
     collected: list[xr.Dataset] = []
 
-    if dataset_name == "KNMI":
+    if dataset_name in ["KNMI_MSG", "KNMI_MTG"]:
         var = config["variables"][1]  # clearsky variable
         for time_step in time_steps:
             clearsky_time_str = time_step.strftime("%Y-%m-%dT%H:%M:%SZ")

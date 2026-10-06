@@ -1,7 +1,7 @@
 [project]
 name = "sunflow"
 version = "1.2.0"
-description = "Solar nowcasting using probabilistic advection with KNMI/DWD satellite data"
+description = "Optical flow solar nowcasting based on satellite data"
 authors = [
     {name = "Irene Livia Kruse", email = "ikr@dmi.dk"},
     {name = "Kristian Holten Møller", email = "khm@dmi.dk"},

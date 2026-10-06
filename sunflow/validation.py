@@ -53,7 +53,7 @@ def validate_config(config: dict[str, Any], dataset_name: str) -> None:
     Args:
         config: Dataset configuration dict loaded from config.yaml.
         Requires the full config for the dataset to check for all required keys.
-        dataset_name: Name of the dataset (used in error messages).
+        dataset_name: Name of the dataset source.
 
     Raises:
         SystemExit: If any required key is absent.
@@ -99,7 +99,7 @@ def validate_run_mode(run_mode: str, dataset_name: str) -> None:
 
     Args:
         run_mode: The requested run mode ('download', 'files', or 's3').
-        dataset_name: Name of the dataset.
+        dataset_name: Name of the dataset source.
 
     Raises:
         SystemExit: If the run mode is incompatible with the dataset.
@@ -119,12 +119,12 @@ def verify_environment_variables(run_mode: str, dataset_name: str) -> None:
     Args:
         run_mode: The mode in which the application is running
         ('download', 'files', 's3').
-        dataset_name: Name of the dataset being used.
+        dataset_name: Name of the dataset source.
 
     Raises:
         SystemExit: If any required environment variable is missing.
     """
-    if run_mode == "download" and dataset_name == "KNMI":
+    if run_mode == "download" and dataset_name in ["KNMI_MSG", "KNMI_MTG"]:
         if not os.getenv("KNMI_API_KEY"):
             logger.error("KNMI_API_KEY environment variable not set. Exiting.\n")
             sys.exit(1)

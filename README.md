@@ -5,9 +5,9 @@ Framework for real-time satellite-based solar irradiance nowcasting at the Danis
 ## Overview
 
 This application performs short-term solar irradiance forecasting using:
-- Real-time gridded surface solar irradiance products from processed geostationary satellite-data: [KNMI MSG-CPP](https://dataplatform.knmi.nl/dataset/msg-cpp-products-1-0) and [DWD SIS](https://opendata.dwd.de/weather/satellite/radiation/sis/)
+- Real-time gridded surface solar irradiance products from processed geostationary satellite-data: [KNMI MSG-CPP](https://dataplatform.knmi.nl/dataset/msg-cpp-products-1-0), [KNMI MTG-CPP](https://dataplatform.knmi.nl/dataset/mtg-cpp-products-1-0) and [DWD SIS](https://opendata.dwd.de/weather/satellite/radiation/sis/)
 - Optical flow motion field computation with the Lucas-Kanade method applied to computed clear-sky indices
-- Probabilistic advection for forecast generation, based on [SolarSTEPS](https://github.com/EnergyWeatherAI/SolarSTEPS) in deterministic mode
+- Probabilistic advection for forecast generation, based on [SolarSTEPS](https://github.com/EnergyWeatherAI/SolarSTEPS)
 - Solar irradiance nowcasts calculated using clear-sky data from the previous day
 
 ## Fetching the source code
@@ -65,7 +65,7 @@ To start a basic run, simply type the command below. This will start the default
 podman run --rm sunflow
 ```
 
-To run for a specific time, specify this when calling the container in the ISO8601 format. Only multiples of 15 minutes are available. Input data from KNMI is available going back one week. Other input can be specified in the same way.
+To run for a specific time, specify this when calling the container in the ISO8601 format. Input data from KNMI is available going back one week. Other input can be specified in the same way.
 
 ```shell
 podman run --rm sunflow --time 2025-10-27T10:00Z
@@ -134,7 +134,7 @@ podman run -it --rm --entrypoint="" sunflow bash
 
 ### Arguments
 
-- `--dataset` - Choose between KNMI or DWD data sources
+- `--dataset` - Choose between input data sources
 - `--domain_satellite` - Domain for required satellite input coverage (DENMARK, NW_EUROPE, NW_EUROPE_SATELLITE, CUSTOM)
 - `--custom_domain_satellite` - Custom `domain_satellite` (lon_min,lat_min,lon_max,lat_max)
 - `--domain_nowcast` - Domain written to output (DENMARK, NW_EUROPE, NW_EUROPE_SATELLITE, CUSTOM, defaults to `--domain_satellite`)
@@ -152,8 +152,9 @@ all members instead.
 
 ## Data Sources
 
-- **KNMI**: MSG-CPP products — requires a free API key from the [KNMI Data Platform](https://dataplatform.knmi.nl/dataset/access/msg-cpp-products-1-0)
+- **KNMI**: MSG-CPP and MTG-CPP products — requires a free API key from the [KNMI Data Platform](https://dataplatform.knmi.nl/dataset/access/msg-cpp-products-1-0)
 - **DWD**: Surface Incoming Shortwave radiation (SIS) — publicly available, no API key required
+- **specMAGIC_\***: GHI produced using the open-source [specMAGIC](https://github.com/dmidk/specMAGIC) code
 
 ## Installing locally
 Building pysteps can sometimes fail if a pre-built wheel is not available for your Python version. If the environment variables `CC` and `CXX` are not set, building pysteps falls back to clang, which may only work on Intel-based macOS. To use GNU compilers instead:
