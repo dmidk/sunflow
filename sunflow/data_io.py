@@ -486,6 +486,7 @@ def save_forecast(
     latitudes: np.ndarray,
     longitudes: np.ndarray,
     dataset_name: str,
+    satellite: str,
     nowcast_config: NowcastConfig,
     model_version: str,
     output_mode: str,
@@ -506,6 +507,7 @@ def save_forecast(
         latitudes: 1-D array of latitude values (degrees).
         longitudes: 1-D array of longitude values (degrees).
         dataset_name: Name of the dataset source.
+        satellite: Satellite platform name written as a global attribute.
         nowcast_config: NowcastConfig object supplying output directory
             and input data frequency.
         model_version: Model version string written as a global attribute.
@@ -616,6 +618,7 @@ def save_forecast(
                 f"using {dataset_name} data"
             ),
             "output_mode": output_mode,
+            "satellite": satellite,
             "history": (
                 f"Created "
                 f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC"

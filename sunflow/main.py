@@ -115,7 +115,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--dataset",
         choices=["KNMI_MSG", "KNMI_MTG", "DWD", "specMAGIC_MTG", "specMAGIC_MTG_pvlib"],
-        default="KNMI_MTG",
+        default="KNMI_MSG",
         help="Dataset (default: %(default)s): \n"
         "KNMI_MSG: MSG-CPP data from KNMI\n"
         "KNMI_MTG: MTG-CPP data from KNMI\n"
@@ -509,6 +509,7 @@ def run_nowcast(
         latitudes,
         longitudes,
         dataset_name,
+        config["satellite"],
         nowcast_config,
         model_version,
         output_mode,
