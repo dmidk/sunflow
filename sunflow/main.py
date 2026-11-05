@@ -326,10 +326,7 @@ def run_nowcast(
                 f" The number of forecast steps was reduced from "
                 f"{nowcast_config.future_steps} to {future_steps}."
             )
-        logger.warning(
-            f"Reducing past_steps from {nowcast_config.past_steps} to {n_past}. "
-            f"future_steps: {nowcast_config.future_steps} -> {future_steps}."
-        )
+        logger.warning(output_warning)
         # Use a copy so the shared config is not modified between runs
         nowcast_config = replace(nowcast_config, future_steps=future_steps)
     if run_mode in {"files", "s3"}:

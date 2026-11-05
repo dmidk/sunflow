@@ -112,7 +112,7 @@ class NowcastConfig:
         - BETA (default: 0.0 for ENS_MEMBERS=1, 0.15 for ENS_MEMBERS>1)
         - PAST_STEPS (default: 4)
         - FUTURE_STEPS (default: 24)
-        - SCALE_FUTURE_STEPS (default: true; if false, FUTURE_STEPS is kept
+        - SCALE_FUTURE_STEPS (default: false; if false, FUTURE_STEPS is kept)
           even when fewer past steps than PAST_STEPS are available)
         - INPUT_DATA_AVAILABILITY_DELAY_MINUTES (default: 24)
         - INPUT_DATA_FREQUENCY_MINUTES (default: 15)
@@ -161,7 +161,7 @@ class NowcastConfig:
             beta=float(_get_value("BETA", str(default_beta))),
             past_steps=int(_get_value("PAST_STEPS", "4")),
             future_steps=int(_get_value("FUTURE_STEPS", "24")),
-            scale_future_steps=_is_truthy(_get_value("SCALE_FUTURE_STEPS", "true")),
+            scale_future_steps=_is_truthy(_get_value("SCALE_FUTURE_STEPS", "false")),
             input_data_availability_delay_minutes=int(
                 _get_value("INPUT_DATA_AVAILABILITY_DELAY_MINUTES", "24")
             ),
