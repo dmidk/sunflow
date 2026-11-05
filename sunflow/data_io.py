@@ -376,6 +376,115 @@ def load_data_from_s3(
     return subset_to_bbox(ds, bbox)
 
 
+def scale_future_steps(
+    future_steps: int, requested_past_steps: int, effective_past_steps: int
+) -> int:
+    """Scale future steps by the relative reduction in past steps (minimum 1)."""
+    if effective_past_steps >= requested_past_steps:
+        return future_steps
+    return max(1, round(future_steps * effective_past_steps / requested_past_steps))
+
+
+def fetch_past_data_with_reduction(
+    time_steps: list[datetime],
+    run_mode: str,
+    config: dict[str, Any],
+    bbox: str,
+    dataset_name: str,
+    domain_satellite_name: str,
+    nowcast_config: NowcastConfig,
+    s3_config: S3Config,
+    min_steps: int = 2,
+) -> tuple[xr.Dataset, list[datetime]]:
+    """Fetch past data, using fewer steps if older data is unavailable.
+
+    Time steps are loaded one at a time from the most recent backwards, and
+    loading stops at the first unavailable step. Each file is therefore read
+    at most once, and the result is always a consecutive series ending at the
+    most recent time step (as required for motion estimation). This is
+    equivalent to reducing the number of past steps one at a time.
+
+    Args:
+        time_steps: Requested past time steps in chronological order, the last
+            one being the most recent.
+        run_mode: One of 'download', 'files', or 's3'.
+        config: Dataset configuration dict.
+        bbox: Bounding box string.
+        dataset_name: Name of dataset (options: KNMI, DWD).
+        domain_satellite_name: Satellite domain identifier.
+        nowcast_config: NowcastConfig object.
+        s3_config: S3Config object.
+        min_steps: Minimum number of consecutive steps required.
+
+    Returns:
+        Tuple of the dataset concatenated along 'time' and the list of time
+        steps actually loaded (chronological order).
+
+    Raises:
+        RuntimeError: If fewer than min_steps consecutive steps are available.
+    """
+    from .downloaders import download_past_data
+
+    collected: list[xr.Dataset] = []
+    loaded_steps: list[datetime] = []
+
+    for ts in reversed(time_steps):
+        ts_str = ts.strftime("%Y-%m-%dT%H:%M:%SZ")
+        try:
+            match run_mode:
+                case "download":
+                    ds = download_past_data([ts], config, bbox, dataset_name)
+                case "files":
+                    ds = load_data_from_files(
+                        [ts],
+                        dataset_name,
+                        domain_satellite_name,
+                        nowcast_config.satellite_data_directory,
+                        "past data",
+                        config["filename_format"],
+                        bbox=bbox,
+                    )
+                case "s3":
+                    ds = load_data_from_s3(
+                        [ts],
+                        dataset_name,
+                        domain_satellite_name,
+                        s3_config,
+                        "past data",
+                        config["filename_format"],
+                        bbox=bbox,
+                    )
+                case _:
+                    raise ValueError(f"Unknown run_mode: {run_mode}")
+        except FileNotFoundError as e:
+            logger.warning(f"Past data not available for {ts_str}: {e}")
+            break
+
+        if ds.sizes.get("time", 0) == 0:
+            logger.warning(f"Past data not available for {ts_str}")
+            break
+
+        collected.append(ds)
+        loaded_steps.append(ts)
+
+    if len(loaded_steps) < min_steps:
+        raise RuntimeError(
+            f"Only {len(loaded_steps)} consecutive past time step(s) available "
+            f"ending at {time_steps[-1].strftime('%Y-%m-%dT%H:%M:%SZ')}; "
+            f"at least {min_steps} required. Cannot proceed."
+        )
+
+    if len(loaded_steps) < len(time_steps):
+        logger.warning(
+            f"Only {len(loaded_steps)} of {len(time_steps)} requested past time "
+            "steps are available. Proceeding with reduced past data."
+        )
+
+    collected.reverse()
+    loaded_steps.reverse()
+    return xr.concat(collected, dim="time", data_vars=None), loaded_steps
+
+
 def fetch_clearsky_with_fallback(
     time_steps: list[datetime],
     run_mode: str,
@@ -491,6 +600,7 @@ def save_forecast(
     output_mode: str,
     run_mode: str = "files",
     s3_config: S3Config | None = None,
+    warning: str | None = None,
 ) -> str:
     """Save forecast data to a CF-compliant NetCDF4 file.
 
@@ -514,6 +624,8 @@ def save_forecast(
             or 'full_ensemble').
         run_mode: One of 'files' (local) or 's3'. Defaults to 'files'.
         s3_config: S3Config object; required when run_mode is 's3'.
+        warning: Optional text written as a global 'warning' attribute
+            (e.g. when fewer input images than requested were used).
 
     Returns:
         Filename (basename only) of the written NetCDF file.
@@ -622,6 +734,7 @@ def save_forecast(
             ),
             "model_version": model_version,
             **({"statistics": statistics_attr} if statistics_attr else {}),
+            **({"warning": warning} if warning else {}),
         },
     )
 

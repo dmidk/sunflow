@@ -23,6 +23,12 @@ _STATISTIC_ALIASES = {
     "75th_percentile": "p75",
     "90th_percentile": "p90",
 }
+_TRUTHY_VALUES = {"1", "true", "yes", "on"}
+
+
+def _is_truthy(value: str) -> bool:
+    """Return True if the string is a truthy flag (1/true/yes/on, any case)."""
+    return value.strip().lower() in _TRUTHY_VALUES
 
 
 # Predefined domain options
@@ -65,8 +71,7 @@ class S3Config:
             bucket=os.getenv("S3_BUCKET", None),
             input_prefix=os.getenv("S3_INPUT_PREFIX", "satellite_data"),
             output_prefix=os.getenv("S3_OUTPUT_PREFIX", "nowcasts"),
-            verify_ssl=os.getenv("AWS_VERIFY_SSL", "true").strip().lower()
-            in {"1", "true", "yes", "on"},
+            verify_ssl=_is_truthy(os.getenv("AWS_VERIFY_SSL", "true")),
         )
 
 
@@ -80,6 +85,7 @@ class NowcastConfig:
     beta: float
     past_steps: int
     future_steps: int
+    scale_future_steps: bool
     input_data_availability_delay_minutes: int
     input_data_frequency_minutes: int
     max_waiting_time_minutes: int
@@ -106,6 +112,8 @@ class NowcastConfig:
         - BETA (default: 0.0 for ENS_MEMBERS=1, 0.15 for ENS_MEMBERS>1)
         - PAST_STEPS (default: 4)
         - FUTURE_STEPS (default: 24)
+        - SCALE_FUTURE_STEPS (default: false; if false, FUTURE_STEPS is kept)
+          even when fewer past steps than PAST_STEPS are available)
         - INPUT_DATA_AVAILABILITY_DELAY_MINUTES (default: 24)
         - INPUT_DATA_FREQUENCY_MINUTES (default: 15)
         - MAX_WAITING_TIME_MINUTES (default: 27)
@@ -153,6 +161,7 @@ class NowcastConfig:
             beta=float(_get_value("BETA", str(default_beta))),
             past_steps=int(_get_value("PAST_STEPS", "4")),
             future_steps=int(_get_value("FUTURE_STEPS", "24")),
+            scale_future_steps=_is_truthy(_get_value("SCALE_FUTURE_STEPS", "false")),
             input_data_availability_delay_minutes=int(
                 _get_value("INPUT_DATA_AVAILABILITY_DELAY_MINUTES", "24")
             ),

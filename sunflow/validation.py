@@ -90,6 +90,14 @@ def validate_nowcast_config(nowcast_config: NowcastConfig) -> None:
         )
         sys.exit(1)
 
+    if nowcast_config.past_steps < 2:
+        logger.error(
+            f"Invalid nowcast configuration: past_steps must be at least 2 "
+            f"(the most recent time step and one more are required). "
+            f"Current value: {nowcast_config.past_steps}. Exiting.\n"
+        )
+        sys.exit(1)
+
 
 def validate_run_mode(run_mode: str, dataset_name: str) -> None:
     """Validate that the run mode is compatible with the dataset.

@@ -103,6 +103,7 @@ podman run -it --rm --entrypoint="" sunflow bash
 | `SATELLITE_DATA_DIRECTORY` | `.` | Directory for input satellite data archive |
 | `PAST_STEPS` | `4` | Number of past time steps for motion field |
 | `FUTURE_STEPS` | `24` | Number of forecast time steps |
+| `SCALE_FUTURE_STEPS` | `false` | If fewer than `PAST_STEPS` input images are available, scale the number of forecast steps by the same ratio. Set to `false` to keep `FUTURE_STEPS` |
 | `INPUT_DATA_AVAILABILITY_DELAY_MINUTES` | `24` | Data availability delay (minutes) |
 | `INPUT_DATA_FREQUENCY_MINUTES` | `15` | Data frequency (minutes) |
 | `MAX_WAITING_TIME_MINUTES` | `27` | Maximum wait time for data (minutes) |

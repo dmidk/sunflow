@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Automatically decrease the number of required past steps if data is missing [!29](https://github.com/dmidk/sunflow/pull/29), @KristianHMoller
+
 ## [v1.3.0]
 
 ### Added

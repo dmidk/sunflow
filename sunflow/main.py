@@ -2,7 +2,7 @@
 import argparse
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 
@@ -17,11 +17,10 @@ from .config import DOMAIN_OPTIONS, NowcastConfig, S3Config
 from .data_io import (
     fetch_clearsky_with_fallback,
     fetch_current_data_with_retry,
-    load_data_from_files,
-    load_data_from_s3,
+    fetch_past_data_with_reduction,
     save_forecast,
+    scale_future_steps,
 )
-from .downloaders import download_past_data
 from .forecast import (
     compute_ensemble_statistics,
     make_pvlib_clearsky_dataset,
@@ -297,40 +296,39 @@ def run_nowcast(
         "past_observations",
     )
 
-    logger.info(f"Loading past data for {len(past_time_steps)} time steps...")
-    match run_mode:
-        case "download":
-            data = download_past_data(
-                past_time_steps,
-                config,
-                domain_satellite,
-                dataset_name,
+    logger.info(f"Loading past data for up to {len(past_time_steps)} time steps...")
+    data, past_time_steps = fetch_past_data_with_reduction(
+        past_time_steps,
+        run_mode,
+        config,
+        domain_satellite,
+        dataset_name,
+        domain_satellite_name,
+        nowcast_config,
+        s3_config,
+    )
+    n_past = len(past_time_steps)
+    logger.info(f"Loaded {n_past} past data timesteps")
+    output_warning = None
+    if n_past < nowcast_config.past_steps:
+        if nowcast_config.scale_future_steps:
+            future_steps = scale_future_steps(
+                nowcast_config.future_steps, nowcast_config.past_steps, n_past
             )
-        case "files":
-            data = load_data_from_files(
-                past_time_steps,
-                dataset_name,
-                domain_satellite_name,
-                nowcast_config.satellite_data_directory,
-                "past data",
-                config["filename_format"],
-                bbox=domain_satellite,
+        else:
+            future_steps = nowcast_config.future_steps
+        output_warning = (
+            f"Only {n_past} satellite images were used instead of the requested "
+            f"{nowcast_config.past_steps} because input data was unavailable."
+        )
+        if future_steps != nowcast_config.future_steps:
+            output_warning += (
+                f" The number of forecast steps was reduced from "
+                f"{nowcast_config.future_steps} to {future_steps}."
             )
-        case "s3":
-            data = load_data_from_s3(
-                past_time_steps,
-                dataset_name,
-                domain_satellite_name,
-                s3_config,
-                "past data",
-                config["filename_format"],
-                bbox=domain_satellite,
-            )
-
-    n_loaded = len(data.time) if "time" in data.coords else 0
-    logger.info(f"Loaded {n_loaded} past data timesteps")
-    if n_loaded == 0:
-        raise RuntimeError("No past data loaded. Cannot proceed.")
+        logger.warning(output_warning)
+        # Use a copy so the shared config is not modified between runs
+        nowcast_config = replace(nowcast_config, future_steps=future_steps)
     if run_mode in {"files", "s3"}:
         validate_dataset_covers_domain(data, domain_satellite, "Input dataset")
 
@@ -514,6 +512,7 @@ def run_nowcast(
         output_mode,
         run_mode,
         s3_config,
+        warning=output_warning,
     )
 
     logger.info(f"Nowcast completed: {filename}")
