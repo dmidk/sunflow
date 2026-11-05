@@ -1,5 +1,5 @@
 ---
-KNMI:
+KNMI_MSG:
   crs: EPSG:4326
   format: NetCDF4
   base_url: https://api.dataplatform.knmi.nl/wms/adaguc-server?dataset=msg_cpp_products&service=wcs&request=getcoverage&
@@ -24,6 +24,21 @@ KNMI:
   #   {hour}: Two-digit hour (e.g., 12)
   #   {second}: Two-digit second (e.g., 00)
   # Path separators are supported, e.g.: "{year}/{month}/{day}/{dataset_name}_{timestamp}.nc"
+  satellite: Meteosat Second Generation (MSG)
+
+KNMI_MTG:
+  crs: EPSG:4326
+  format: NetCDF4
+  base_url: https://api.dataplatform.knmi.nl/wms/adaguc-server?dataset=mtg_cpp_products&service=wcs&request=getcoverage&
+  variables:
+  - surface_downwelling_shortwave_flux_in_air
+  - surface_downwelling_shortwave_flux_in_air_assuming_clear_sky
+  nc_variable_names:
+    sds: sds
+    sds_cs: sds_cs
+  filename_format: "NetCDF4_sds_{pds_timestamp}.nc"
+  input_data_frequency_minutes: 10
+  satellite: Meteosat Third Generation (MTG)
 
 DWD:
   base_url: https://opendata.dwd.de/weather/satellite/radiation/sis/
@@ -36,6 +51,7 @@ DWD:
   # Required: Filename format for input data files
   # Supports subdirectories via path separators, e.g.: "{year}/{month}/{day}/{dataset_name}_{timestamp}_{domain_satellite_name}.nc"
   filename_format: "{dataset_name}_{timestamp}_{domain_satellite_name}.nc"
+  satellite: Meteosat Second Generation (MSG)
 
 specMAGIC_MTG:
   nc_variable_names:
@@ -46,6 +62,7 @@ specMAGIC_MTG:
   clearsky:
     method: file
     path: "CSR/CSR{year}{month}{day}{hour}{minute}.nc"
+  satellite: Meteosat Third Generation (MTG)
 
 specMAGIC_MTG_pvlib:
   nc_variable_names:
@@ -55,3 +72,4 @@ specMAGIC_MTG_pvlib:
   input_data_frequency_minutes: 10
   clearsky:
     method: pvlib
+  satellite: Meteosat Third Generation (MTG)

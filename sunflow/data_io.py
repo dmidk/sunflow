@@ -46,7 +46,7 @@ def fetch_current_data_with_retry(
         run_mode: One of 'download', 'files', or 's3'
         config: Dataset configuration dict
         domain_satellite: Domain string for required satellite input coverage
-        dataset_name: Name of dataset (options: KNMI, DWD)
+        dataset_name: Name of the dataset source.
         domain_satellite_name: Domain choice used in input filenames
         nowcast_config: NowcastConfig object
         s3_config: S3Config object
@@ -132,7 +132,7 @@ def generate_input_filename(
 
     Args:
         time_step: Datetime of the data timestep.
-        dataset_name: Name of dataset (options: KNMI, DWD).
+        dataset_name: Name of the dataset source.
         domain_satellite_name: Satellite domain identifier.
         filename_format: Template string from config['filename_format'].
 
@@ -140,7 +140,7 @@ def generate_input_filename(
         Filename string with all template variables substituted.
 
     Template variables supported:
-        {dataset_name}: Name of the dataset
+        {dataset_name}: Name of the dataset source
         {domain_satellite_name}: Satellite domain identifier
         {timestamp}: Compact format YYYYMMDDHHMM
         {pds_timestamp}: PDS format YYYY-MM-DDTHH_MM_SSZ
@@ -187,7 +187,7 @@ def check_current_data_existence_file(
 
     Args:
         request_time: Python datetime object.
-        dataset_name: Name of dataset (options: KNMI, DWD).
+        dataset_name: Name of the dataset source.
         domain_satellite_name: Satellite domain identifier.
         satellite_data_directory: Directory containing data files.
         filename_format: Template string from config['filename_format'].
@@ -227,7 +227,7 @@ def load_data_from_files(
 
     Args:
         time_steps: List of timesteps to load.
-        dataset_name: Name of dataset (options: KNMI, DWD).
+        dataset_name: Name of the dataset source.
         domain_satellite_name: Satellite domain identifier.
         satellite_data_directory: Directory containing data files.
         data_type: Type of data for logging (options: past data, clearsky data).
@@ -286,7 +286,7 @@ def check_current_data_existence_s3(
 
     Args:
         request_time: Python datetime object.
-        dataset_name: Name of dataset (options: KNMI, DWD).
+        dataset_name: Name of the dataset source.
         domain_satellite_name: Satellite domain identifier.
         s3_config: S3 configuration object.
         filename_format: Template string from config['filename_format'].
@@ -336,7 +336,7 @@ def load_data_from_s3(
 
     Args:
         time_steps: List of timesteps to load.
-        dataset_name: Name of dataset (options: KNMI, DWD).
+        dataset_name: Name of the dataset source.
         domain_satellite_name: Satellite domain identifier.
         s3_config: S3 configuration object.
         data_type: Type of data for logging (options: past data, clearsky data).
@@ -402,7 +402,7 @@ def fetch_clearsky_with_fallback(
         filename_format: Template string for clear-sky files.
         config: Dataset configuration dict.
         bbox: Bounding box string.
-        dataset_name: Name of dataset (options: KNMI, DWD).
+        dataset_name: Name of the dataset source.
         domain_satellite_name: Satellite domain identifier.
         nowcast_config: NowcastConfig object.
         s3_config: S3Config object.
@@ -486,6 +486,7 @@ def save_forecast(
     latitudes: np.ndarray,
     longitudes: np.ndarray,
     dataset_name: str,
+    satellite: str,
     nowcast_config: NowcastConfig,
     model_version: str,
     output_mode: str,
@@ -505,7 +506,8 @@ def save_forecast(
         n_steps: Number of forecast time steps to write.
         latitudes: 1-D array of latitude values (degrees).
         longitudes: 1-D array of longitude values (degrees).
-        dataset_name: Name of the source dataset (options: KNMI, DWD).
+        dataset_name: Name of the dataset source.
+        satellite: Satellite platform name written as a global attribute.
         nowcast_config: NowcastConfig object supplying output directory
             and input data frequency.
         model_version: Model version string written as a global attribute.
@@ -616,6 +618,7 @@ def save_forecast(
                 f"using {dataset_name} data"
             ),
             "output_mode": output_mode,
+            "satellite": satellite,
             "history": (
                 f"Created "
                 f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC"

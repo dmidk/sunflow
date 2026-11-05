@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Added configuration for KNMI_MTG [!26](https://github.com/dmidk/sunflow/pull/26), @KristianHMoller
+- Added `satellite` as a required field in config.yaml to be printed in the outpt file [!26](https://github.com/dmidk/sunflow/pull/26), @KristianHMoller
+
 ## [v1.3.0]
 
 ### Added
