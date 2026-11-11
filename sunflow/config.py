@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Self
 
 DEFAULT_ENSEMBLE_STATISTICS = "median,mean,p10,p25,p75,p90"
+DEFAULT_OUTPUT_FILENAME_FORMAT = "SolarNowcast_{iso8601_compact_timestamp}.nc"
 _ALLOWED_STATISTICS = {
     "median",
     "mean",

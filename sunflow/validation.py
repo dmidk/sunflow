@@ -58,7 +58,7 @@ def validate_config(config: dict[str, Any], dataset_name: str) -> None:
     Raises:
         SystemExit: If any required key is absent.
     """
-    required_keys = ["filename_format", "satellite"]
+    required_keys = ["input_filename_format", "satellite"]
     missing = [k for k in required_keys if k not in config]
     if missing:
         logger.error(

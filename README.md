@@ -130,7 +130,7 @@ podman run -it --rm --entrypoint="" sunflow bash
 
 ### Volume Mounts
 
-- `/data/nowcasts` - Forecast output files (NetCDF format)
+- `/data/nowcasts` - Forecast output files (NetCDF format), named `SolarNowcast_<YYYY-MM-DDTHHMMZ>.nc` by default (configurable via `output_filename_format` in `config.yaml`)
 - `/data/satellite_data` - Input satellite data archive
 
 ### Arguments

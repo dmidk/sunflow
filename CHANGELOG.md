@@ -8,8 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Added optional `output_filename_format` to config.yaml to configure the output file name (defaults to `SolarNowcast_{iso8601_compact_timestamp}.nc`)
+- Added `{iso8601_compact_timestamp}` (e.g. `2026-03-09T1200Z`) as a filename template variable
 - Added configuration for KNMI_MTG [!26](https://github.com/dmidk/sunflow/pull/26), @KristianHMoller
 - Added `satellite` as a required field in config.yaml to be printed in the outpt file [!26](https://github.com/dmidk/sunflow/pull/26), @KristianHMoller
+
+### Changed
+- Renamed `filename_format` to `input_filename_format` in config.yaml
 
 ## [v1.3.0]
 

@@ -10,7 +10,7 @@ import requests.exceptions
 import xarray as xr
 from loguru import logger
 
-from .config import NowcastConfig, S3Config
+from .config import DEFAULT_OUTPUT_FILENAME_FORMAT, NowcastConfig, S3Config
 from .geospatial import subset_to_bbox, validate_dataset_covers_domain
 from .validation import DataNotAvailableError
 
@@ -81,7 +81,7 @@ def fetch_current_data_with_retry(
                         dataset_name,
                         domain_satellite_name,
                         nowcast_config.satellite_data_directory,
-                        config["filename_format"],
+                        config["input_filename_format"],
                         domain_satellite,
                     )
                 case "s3":
@@ -90,7 +90,7 @@ def fetch_current_data_with_retry(
                         dataset_name,
                         domain_satellite_name,
                         s3_config,
-                        config["filename_format"],
+                        config["input_filename_format"],
                         domain_satellite,
                     )
 
@@ -120,30 +120,38 @@ def fetch_current_data_with_retry(
             raise
 
 
-def generate_input_filename(
+def generate_filename(
     time_step: datetime,
     dataset_name: str,
-    domain_satellite_name: str,
     filename_format: str,
+    domain_satellite_name: str | None = None,
 ) -> str:
-    """Generate input filename based on a format template string.
+    """Generate an input or output filename from a format template string.
 
-    Works uniformly across all modes (download, files, s3).
+    Works uniformly across all modes (download, files, s3) and for both input
+    files (config['input_filename_format']) and forecast output files
+    (config['output_filename_format']).
 
     Args:
-        time_step: Datetime of the data timestep.
+        time_step: Datetime of the data timestep or forecast reference time.
         dataset_name: Name of the dataset source.
-        domain_satellite_name: Satellite domain identifier.
-        filename_format: Template string from config['filename_format'].
+        filename_format: Template string to substitute variables into.
+        domain_satellite_name: Satellite domain identifier. Only available
+            as a template variable when provided (input filenames).
 
     Returns:
         Filename string with all template variables substituted.
 
+    Raises:
+        KeyError: If the template uses {domain_satellite_name} but no
+            domain_satellite_name was provided.
+
     Template variables supported:
         {dataset_name}: Name of the dataset source
-        {domain_satellite_name}: Satellite domain identifier
+        {domain_satellite_name}: Satellite domain identifier (input only)
         {timestamp}: Compact format YYYYMMDDHHMM
         {pds_timestamp}: PDS format YYYY-MM-DDTHH_MM_SSZ
+        {iso8601_compact_timestamp}: ISO 8601 compact format timestamp YYYY-MM-DDTHHMMZ
         {year}: Four-digit year (e.g. 2026)
         {month}: Two-digit month (e.g. 03)
         {day}: Two-digit day (e.g. 09)
@@ -153,26 +161,24 @@ def generate_input_filename(
 
     Path separators in the result are supported, so a format like
     ``{year}/{month}/{day}/{dataset_name}_{timestamp}.nc`` resolves to a
-    file inside a date-structured subdirectory of *satellite_data_directory*.
+    file inside a date-structured subdirectory.
     """
-    # Generate both time formats
-    timestamp_compact = time_step.strftime("%Y%m%d%H%M")
-    timestamp_pds = time_step.strftime("%Y-%m-%dT%H_%M_%SZ")
+    fields = {"dataset_name": dataset_name}
+    if domain_satellite_name is not None:
+        fields["domain_satellite_name"] = domain_satellite_name
 
-    # Substitute template variables
-    filename = filename_format.format(
-        dataset_name=dataset_name,
-        domain_satellite_name=domain_satellite_name,
-        timestamp=timestamp_compact,
-        pds_timestamp=timestamp_pds,
+    return filename_format.format(
+        timestamp=time_step.strftime("%Y%m%d%H%M"),
+        pds_timestamp=time_step.strftime("%Y-%m-%dT%H_%M_%SZ"),
+        iso8601_compact_timestamp=time_step.strftime("%Y-%m-%dT%H%MZ"),
         year=time_step.strftime("%Y"),
         month=time_step.strftime("%m"),
         day=time_step.strftime("%d"),
         hour=time_step.strftime("%H"),
         minute=time_step.strftime("%M"),
         second=time_step.strftime("%S"),
+        **fields,
     )
-    return filename
 
 
 def check_current_data_existence_file(
@@ -180,7 +186,7 @@ def check_current_data_existence_file(
     dataset_name: str,
     domain_satellite_name: str,
     satellite_data_directory: str,
-    filename_format: str,
+    input_filename_format: str,
     required_domain: str | None = None,
 ) -> None:
     """Check for existence of current data file.
@@ -190,15 +196,19 @@ def check_current_data_existence_file(
         dataset_name: Name of the dataset source.
         domain_satellite_name: Satellite domain identifier.
         satellite_data_directory: Directory containing data files.
-        filename_format: Template string from config['filename_format'].
+        input_filename_format: Template string from
+            config['input_filename_format'].
         required_domain: Optional domain string that must be covered by the file.
 
     Raises:
         FileNotFoundError: If the expected file does not exist.
         RuntimeError: If required_domain is provided and file coverage is insufficient.
     """
-    filename = generate_input_filename(
-        request_time, dataset_name, domain_satellite_name, filename_format
+    filename = generate_filename(
+        request_time,
+        dataset_name,
+        input_filename_format,
+        domain_satellite_name,
     )
     filepath = os.path.join(satellite_data_directory, filename)
     logger.info(f"Checking existence of data at {filepath}")
@@ -220,7 +230,7 @@ def load_data_from_files(
     domain_satellite_name: str,
     satellite_data_directory: str,
     data_type: str,
-    filename_format: str,
+    input_filename_format: str,
     bbox: str,
 ) -> xr.Dataset:
     """Load time steps from files (operational mode).
@@ -231,7 +241,8 @@ def load_data_from_files(
         domain_satellite_name: Satellite domain identifier.
         satellite_data_directory: Directory containing data files.
         data_type: Type of data for logging (options: past data, clearsky data).
-        filename_format: Template string from config['filename_format'].
+        input_filename_format: Template string from
+            config['input_filename_format'].
 
     Returns:
         xarray Dataset concatenated along a 'time' dimension.
@@ -242,8 +253,11 @@ def load_data_from_files(
     collected: list[xr.Dataset] = []
 
     for time_step in time_steps:
-        filename = generate_input_filename(
-            time_step, dataset_name, domain_satellite_name, filename_format
+        filename = generate_filename(
+            time_step,
+            dataset_name,
+            input_filename_format,
+            domain_satellite_name,
         )
         filepath = os.path.join(satellite_data_directory, filename)
 
@@ -279,7 +293,7 @@ def check_current_data_existence_s3(
     dataset_name: str,
     domain_satellite_name: str,
     s3_config: S3Config,
-    filename_format: str,
+    input_filename_format: str,
     required_domain: str | None = None,
 ) -> None:
     """Check for existence of current data file in S3.
@@ -289,15 +303,19 @@ def check_current_data_existence_s3(
         dataset_name: Name of the dataset source.
         domain_satellite_name: Satellite domain identifier.
         s3_config: S3 configuration object.
-        filename_format: Template string from config['filename_format'].
+        input_filename_format: Template string from
+            config['input_filename_format'].
         required_domain: Optional domain string that must be covered by the file.
 
     Raises:
         FileNotFoundError: If the expected file does not exist in S3.
         RuntimeError: If required_domain is provided and file coverage is insufficient.
     """
-    filename = generate_input_filename(
-        request_time, dataset_name, domain_satellite_name, filename_format
+    filename = generate_filename(
+        request_time,
+        dataset_name,
+        input_filename_format,
+        domain_satellite_name,
     )
     s3_path = f"s3://{s3_config.bucket}/{s3_config.input_prefix}/{filename}"
     logger.info(f"Checking existence of data at {s3_path}")
@@ -329,7 +347,7 @@ def load_data_from_s3(
     domain_satellite_name: str,
     s3_config: S3Config,
     data_type: str,
-    filename_format: str,
+    input_filename_format: str,
     bbox: str,
 ) -> xr.Dataset:
     """Load time steps from S3.
@@ -340,7 +358,8 @@ def load_data_from_s3(
         domain_satellite_name: Satellite domain identifier.
         s3_config: S3 configuration object.
         data_type: Type of data for logging (options: past data, clearsky data).
-        filename_format: Template string from config['filename_format'].
+        input_filename_format: Template string from
+            config['input_filename_format'].
 
     Returns:
         xarray Dataset concatenated along a 'time' dimension.
@@ -352,8 +371,11 @@ def load_data_from_s3(
     fs = _build_s3_filesystem(s3_config)
 
     for time_step in time_steps:
-        filename = generate_input_filename(
-            time_step, dataset_name, domain_satellite_name, filename_format
+        filename = generate_filename(
+            time_step,
+            dataset_name,
+            input_filename_format,
+            domain_satellite_name,
         )
         s3_path = f"s3://{s3_config.bucket}/{s3_config.input_prefix}/{filename}"
 
@@ -380,7 +402,7 @@ def fetch_clearsky_with_fallback(
     time_steps: list[datetime],
     run_mode: str,
     max_fallback_days: int,
-    filename_format: str,
+    clearsky_filename_format: str,
     config: dict[str, Any],
     bbox: str,
     dataset_name: str,
@@ -399,7 +421,7 @@ def fetch_clearsky_with_fallback(
         time_steps: Requested clearsky times (typically forecast times - 1 day).
         run_mode: One of 'download', 'files', or 's3'.
         max_fallback_days: Maximum number of days back to search per time step.
-        filename_format: Template string for clear-sky files.
+        clearsky_filename_format: Template string for clear-sky files.
         config: Dataset configuration dict.
         bbox: Bounding box string.
         dataset_name: Name of the dataset source.
@@ -441,7 +463,7 @@ def fetch_clearsky_with_fallback(
                             domain_satellite_name,
                             nowcast_config.satellite_data_directory,
                             "clearsky data",
-                            filename_format,
+                            clearsky_filename_format,
                             bbox=bbox,
                         )
                     case "s3":
@@ -451,7 +473,7 @@ def fetch_clearsky_with_fallback(
                             domain_satellite_name,
                             s3_config,
                             "clearsky data",
-                            filename_format,
+                            clearsky_filename_format,
                             bbox=bbox,
                         )
 
@@ -492,6 +514,7 @@ def save_forecast(
     output_mode: str,
     run_mode: str = "files",
     s3_config: S3Config | None = None,
+    output_filename_format: str = DEFAULT_OUTPUT_FILENAME_FORMAT,
 ) -> str:
     """Save forecast data to a CF-compliant NetCDF4 file.
 
@@ -516,12 +539,15 @@ def save_forecast(
             or 'full_ensemble').
         run_mode: One of 'files' (local) or 's3'. Defaults to 'files'.
         s3_config: S3Config object; required when run_mode is 's3'.
+        output_filename_format: Template for the output filename (see
+            `generate_filename`). Defaults to
+            'SolarNowcast_{iso8601_compact_timestamp}.nc'.
 
     Returns:
         Filename (basename only) of the written NetCDF file.
     """
     input_data_frequency_minutes = nowcast_config.input_data_frequency_minutes
-    filename = f"SolarNowcast_{time_step.strftime('%Y%m%d%H%M')}.nc"
+    filename = generate_filename(time_step, dataset_name, output_filename_format)
 
     data_vars: dict[str, tuple[list[str], np.ndarray, dict[str, str]]]
     statistics_attr = ""
@@ -639,6 +665,7 @@ def save_forecast(
         save_forecast_to_s3(ds, filename, s3_config, time_encoding)
     else:
         output_path = os.path.join(nowcast_config.nowcast_directory, filename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         ds.to_netcdf(output_path, encoding={"time": time_encoding})
 
     return filename
@@ -659,7 +686,7 @@ def save_forecast_to_s3(
     Args:
         dataset: xarray Dataset to write, as produced by `save_forecast`.
         filename: Basename of the destination file (e.g.
-            'SolarNowcast_202603091200.nc').
+            'SolarNowcast_2026-03-09T1200Z.nc').
         s3_config: S3Config object supplying bucket, output prefix, and
             endpoint URL.
         time_encoding: Encoding dict for the 'time' variable (must include at
