@@ -479,12 +479,12 @@ def run_nowcast(
 
     if full_ensemble:
         output_forecast = solar_forecast
-        output_mode = "full_ensemble"
+        output_mode = "Full ensemble"
         logger.info("Saving full ensemble forecast")
     else:
         if solar_forecast.shape[0] == 1:
             output_forecast = solar_forecast
-            output_mode = "deterministic"
+            output_mode = "Deterministic"
             logger.info(
                 "Saving deterministic forecast "
                 "(single ensemble member, kept as singleton ensemble dimension)"
@@ -494,7 +494,7 @@ def run_nowcast(
                 solar_forecast,
                 nowcast_config.ensemble_statistics,
             )
-            output_mode = "ensemble_statistics"
+            output_mode = "Ensemble statistics"
             logger.info(
                 "Saving ensemble statistics across members: "
                 f"{', '.join(nowcast_config.ensemble_statistics)} "
