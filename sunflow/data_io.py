@@ -10,7 +10,7 @@ import requests.exceptions
 import xarray as xr
 from loguru import logger
 
-from .config import DEFAULT_OUTPUT_FILENAME_FORMAT, NowcastConfig, S3Config
+from .config import NowcastConfig, S3Config
 from .geospatial import subset_to_bbox, validate_dataset_covers_domain
 from .validation import DataNotAvailableError
 
@@ -74,6 +74,7 @@ def fetch_current_data_with_retry(
                         dataset_name,
                         domain_satellite_name,
                         nowcast_config.satellite_data_directory,
+                        nowcast_config.input_filename_format,
                     )
                 case "files":
                     check_current_data_existence_file(
@@ -81,7 +82,7 @@ def fetch_current_data_with_retry(
                         dataset_name,
                         domain_satellite_name,
                         nowcast_config.satellite_data_directory,
-                        config["input_filename_format"],
+                        nowcast_config.input_filename_format,
                         domain_satellite,
                     )
                 case "s3":
@@ -90,7 +91,7 @@ def fetch_current_data_with_retry(
                         dataset_name,
                         domain_satellite_name,
                         s3_config,
-                        config["input_filename_format"],
+                        nowcast_config.input_filename_format,
                         domain_satellite,
                     )
 
@@ -129,8 +130,8 @@ def generate_filename(
     """Generate an input or output filename from a format template string.
 
     Works uniformly across all modes (download, files, s3) and for both input
-    files (config['input_filename_format']) and forecast output files
-    (config['output_filename_format']).
+    files (NowcastConfig.input_filename_format) and forecast output files
+    (NowcastConfig.output_filename_format).
 
     Args:
         time_step: Datetime of the data timestep or forecast reference time.
@@ -197,7 +198,7 @@ def check_current_data_existence_file(
         domain_satellite_name: Satellite domain identifier.
         satellite_data_directory: Directory containing data files.
         input_filename_format: Template string from
-            config['input_filename_format'].
+            NowcastConfig.input_filename_format.
         required_domain: Optional domain string that must be covered by the file.
 
     Raises:
@@ -242,7 +243,7 @@ def load_data_from_files(
         satellite_data_directory: Directory containing data files.
         data_type: Type of data for logging (options: past data, clearsky data).
         input_filename_format: Template string from
-            config['input_filename_format'].
+            NowcastConfig.input_filename_format.
 
     Returns:
         xarray Dataset concatenated along a 'time' dimension.
@@ -304,7 +305,7 @@ def check_current_data_existence_s3(
         domain_satellite_name: Satellite domain identifier.
         s3_config: S3 configuration object.
         input_filename_format: Template string from
-            config['input_filename_format'].
+            NowcastConfig.input_filename_format.
         required_domain: Optional domain string that must be covered by the file.
 
     Raises:
@@ -359,7 +360,7 @@ def load_data_from_s3(
         s3_config: S3 configuration object.
         data_type: Type of data for logging (options: past data, clearsky data).
         input_filename_format: Template string from
-            config['input_filename_format'].
+            NowcastConfig.input_filename_format.
 
     Returns:
         xarray Dataset concatenated along a 'time' dimension.
@@ -514,7 +515,6 @@ def save_forecast(
     output_mode: str,
     run_mode: str = "files",
     s3_config: S3Config | None = None,
-    output_filename_format: str = DEFAULT_OUTPUT_FILENAME_FORMAT,
 ) -> str:
     """Save forecast data to a CF-compliant NetCDF4 file.
 
@@ -531,23 +531,23 @@ def save_forecast(
         longitudes: 1-D array of longitude values (degrees).
         dataset_name: Name of the dataset source.
         satellite: Satellite platform name written as a global attribute.
-        nowcast_config: NowcastConfig object supplying output directory
-            and input data frequency.
+        nowcast_config: NowcastConfig object supplying output directory,
+            output filename format (see `generate_filename`) and input data
+            frequency.
         model_version: Model version string written as a global attribute.
         output_mode: Output aggregation mode label written to global
             NetCDF attrs (expected: 'deterministic', 'ensemble_statistics',
             or 'full_ensemble').
         run_mode: One of 'files' (local) or 's3'. Defaults to 'files'.
         s3_config: S3Config object; required when run_mode is 's3'.
-        output_filename_format: Template for the output filename (see
-            `generate_filename`). Defaults to
-            'SolarNowcast_{iso8601_compact_timestamp}.nc'.
 
     Returns:
         Filename (basename only) of the written NetCDF file.
     """
     input_data_frequency_minutes = nowcast_config.input_data_frequency_minutes
-    filename = generate_filename(time_step, dataset_name, output_filename_format)
+    filename = generate_filename(
+        time_step, dataset_name, nowcast_config.output_filename_format
+    )
 
     data_vars: dict[str, tuple[list[str], np.ndarray, dict[str, str]]]
     statistics_attr = ""

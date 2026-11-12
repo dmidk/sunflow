@@ -9,7 +9,8 @@ KNMI_MSG:
   nc_variable_names:
     sds: sds
     sds_cs: sds_cs
-  # Required: Filename format for input data files
+  # Required here or via the INPUT_FILENAME_FORMAT environment variable
+  # (the environment variable takes priority): Filename format for input data files
   # input_filename_format: "{dataset_name}_{timestamp}_{domain_satellite_name}.nc"
   # Format for PDS data:
   input_filename_format: "NetCDF4_sds_{pds_timestamp}.nc"
@@ -26,7 +27,8 @@ KNMI_MSG:
   #   {second}: Two-digit second (e.g., 00)
   # Path separators are supported, e.g.: "{year}/{month}/{day}/{dataset_name}_{timestamp}.nc"
   #
-  # Optional: output_filename_format
+  # Optional: output_filename_format (or the OUTPUT_FILENAME_FORMAT environment
+  # variable, which takes priority)
   # Filename format for output forecast files.
   # Defaults to "SolarNowcast_{iso8601_compact_timestamp}.nc" if omitted.
   # Supports the same template variables as input_filename_format, except
@@ -57,7 +59,7 @@ DWD:
   nc_variable_names:
     sds: SIS
     sds_cs: SISc
-  # Required: Filename format for input data files
+  # Required here or via the INPUT_FILENAME_FORMAT environment variable: Filename format for input data files
   # Supports subdirectories via path separators, e.g.: "{year}/{month}/{day}/{dataset_name}_{timestamp}_{domain_satellite_name}.nc"
   input_filename_format: "{dataset_name}_{timestamp}_{domain_satellite_name}.nc"
   satellite: Meteosat Second Generation (MSG)

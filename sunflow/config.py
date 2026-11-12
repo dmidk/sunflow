@@ -88,6 +88,8 @@ class NowcastConfig:
     max_clearsky_fallback_days: int
     min_solar_elevation_degrees: float
     ensemble_statistics: list[str]
+    input_filename_format: str | None
+    output_filename_format: str
 
     @classmethod
     def from_env(
@@ -114,18 +116,20 @@ class NowcastConfig:
         - MAX_CLEARSKY_FALLBACK_DAYS (default: 3)
         - MIN_SOLAR_ELEVATION_DEGREES (default: 6)
         - ENSEMBLE_STATISTICS (default: median,mean,p10,p25,p75,p90)
+        - INPUT_FILENAME_FORMAT (no default; must be set here or in config.yaml)
+        - OUTPUT_FILENAME_FORMAT (default: SolarNowcast_{iso8601_compact_timestamp}.nc)
         """
 
         overrides = overrides or {}
 
-        def _get_value(name: str, default: str) -> str:
+        def _get_optional_value(name: str) -> str | None:
             env_value = os.getenv(name)
             if env_value is not None:
                 return env_value
 
             override_value = overrides.get(name.lower())
             if override_value is None:
-                return default
+                return None
 
             if name == "ENSEMBLE_STATISTICS":
                 if isinstance(override_value, str):
@@ -134,6 +138,10 @@ class NowcastConfig:
                     return ",".join(str(item) for item in override_value)
 
             return str(override_value)
+
+        def _get_value(name: str, default: str) -> str:
+            value = _get_optional_value(name)
+            return default if value is None else value
 
         ens_members = ensemble_members
         # Reference for default noise values:
@@ -167,6 +175,10 @@ class NowcastConfig:
                 _get_value("MIN_SOLAR_ELEVATION_DEGREES", "6")
             ),
             ensemble_statistics=statistics,
+            input_filename_format=_get_optional_value("INPUT_FILENAME_FORMAT"),
+            output_filename_format=_get_value(
+                "OUTPUT_FILENAME_FORMAT", DEFAULT_OUTPUT_FILENAME_FORMAT
+            ),
         )
 
 

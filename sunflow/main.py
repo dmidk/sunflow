@@ -13,12 +13,7 @@ from loguru import logger
 from pysteps.motion.lucaskanade import dense_lucaskanade
 
 from . import __version__
-from .config import (
-    DEFAULT_OUTPUT_FILENAME_FORMAT,
-    DOMAIN_OPTIONS,
-    NowcastConfig,
-    S3Config,
-)
+from .config import DOMAIN_OPTIONS, NowcastConfig, S3Config
 from .data_io import (
     fetch_clearsky_with_fallback,
     fetch_current_data_with_retry,
@@ -257,7 +252,7 @@ def run_nowcast(
     nc_variable_names = config["nc_variable_names"].copy()
     clearsky_config = config.get(
         "clearsky",
-        {"method": "file", "path": config["input_filename_format"]},
+        {"method": "file", "path": nowcast_config.input_filename_format},
     )
 
     # Fetch current data (with retry loop in operational mode)
@@ -318,7 +313,7 @@ def run_nowcast(
                 domain_satellite_name,
                 nowcast_config.satellite_data_directory,
                 "past data",
-                config["input_filename_format"],
+                nowcast_config.input_filename_format,
                 bbox=domain_satellite,
             )
         case "s3":
@@ -328,7 +323,7 @@ def run_nowcast(
                 domain_satellite_name,
                 s3_config,
                 "past data",
-                config["input_filename_format"],
+                nowcast_config.input_filename_format,
                 bbox=domain_satellite,
             )
 
@@ -349,7 +344,7 @@ def run_nowcast(
                 nc_variable_names["sds_cs"],
             )
         )
-    elif clearsky_config["path"] != config["input_filename_format"]:
+    elif clearsky_config["path"] != nowcast_config.input_filename_format:
         logger.info("Loading separate clearsky data for past observations...")
         clearsky_data = fetch_clearsky_with_fallback(
             past_time_steps,
@@ -520,7 +515,6 @@ def run_nowcast(
         output_mode,
         run_mode,
         s3_config,
-        config.get("output_filename_format", DEFAULT_OUTPUT_FILENAME_FORMAT),
     )
 
     logger.info(f"Nowcast completed: {filename}")
