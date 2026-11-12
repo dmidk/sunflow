@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Renamed `filename_format` to `input_filename_format` in config.yaml. It has no default and must be set in config.yaml or via `INPUT_FILENAME_FORMAT` [!30](https://github.com/dmidk/sunflow/pull/30), @KristianHMoller
-- Changed the default output filename to have ISO 8601-compliant datetime. [!30](https://github.com/dmidk/sunflow/pull/30), @KristianHMoller
+- Changed the default output filename to have ISO 8601-compliant datetime. The default is unchanged for KNMI_MSG [!30](https://github.com/dmidk/sunflow/pull/30), @KristianHMoller
 
 ## [v1.3.0]
 
