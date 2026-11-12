@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Added optional `output_filename_format` to config.yaml to configure the output file name [!30](https://github.com/dmidk/sunflow/pull/30), @KristianHMoller
 - Added `INPUT_FILENAME_FORMAT` and `OUTPUT_FILENAME_FORMAT` environment variables, which take priority over the corresponding config.yaml values [!30](https://github.com/dmidk/sunflow/pull/30), @KristianHMoller
+- Added the dataset used for the run (e.g. `KNMI_MTG`) as the `satellite_data_source` global attribute in the output file [!30](https://github.com/dmidk/sunflow/pull/30), @KristianHMoller
 - Added configuration for KNMI_MTG [!26](https://github.com/dmidk/sunflow/pull/26), @KristianHMoller
 - Added `satellite` as a required field in config.yaml to be printed in the outpt file [!26](https://github.com/dmidk/sunflow/pull/26), @KristianHMoller
 

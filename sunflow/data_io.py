@@ -529,7 +529,8 @@ def save_forecast(
         n_steps: Number of forecast time steps to write.
         latitudes: 1-D array of latitude values (degrees).
         longitudes: 1-D array of longitude values (degrees).
-        dataset_name: Name of the dataset source.
+        dataset_name: Name of the dataset source, written as the
+            'satellite_data_source' global attribute.
         satellite: Satellite platform name written as a global attribute.
         nowcast_config: NowcastConfig object supplying output directory,
             output filename format (see `generate_filename`) and input data
@@ -645,6 +646,7 @@ def save_forecast(
             ),
             "output_mode": output_mode,
             "satellite": satellite,
+            "satellite_data_source": dataset_name,
             "history": (
                 f"Created "
                 f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC"
