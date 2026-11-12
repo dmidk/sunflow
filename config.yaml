@@ -27,6 +27,7 @@ KNMI_MSG:
   #   {second}: Two-digit second (e.g., 00)
   # Path separators are supported, e.g.: "{year}/{month}/{day}/{dataset_name}_{timestamp}.nc"
   #
+  output_filename_format: "SolarNowcast_{timestamp}.nc"
   # Optional: output_filename_format (or the OUTPUT_FILENAME_FORMAT environment
   # variable, which takes priority)
   # Filename format for output forecast files.
