@@ -31,10 +31,10 @@ KNMI_MSG:
   # Optional: output_filename_format (or the OUTPUT_FILENAME_FORMAT environment
   # variable, which takes priority)
   # Filename format for output forecast files.
-  # Defaults to "SolarNowcast_{iso8601_compact_timestamp}.nc" if omitted.
+  # Defaults to "SolarNowcast_{dataset_name}_{iso8601_compact_timestamp}.nc" if omitted.
   # Supports the same template variables as input_filename_format, except
   # {domain_satellite_name}, which is not available for output files.
-  # output_filename_format: "SolarNowcast_{iso8601_compact_timestamp}.nc"
+  # output_filename_format: "SolarNowcast_{dataset_name}_{iso8601_compact_timestamp}.nc"
   satellite: Meteosat Second Generation (MSG)
 
 KNMI_MTG:

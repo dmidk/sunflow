@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Renamed `filename_format` to `input_filename_format` in config.yaml. It has no default and must be set in config.yaml or via `INPUT_FILENAME_FORMAT` [!30](https://github.com/dmidk/sunflow/pull/30), @KristianHMoller
-- Changed the default output filename to have ISO 8601-compliant datetime. The default is unchanged for KNMI_MSG [!30](https://github.com/dmidk/sunflow/pull/30), @KristianHMoller
+- Changed the default output filename to include the dataset name and an ISO 8601-compliant datetime (`SolarNowcast_{dataset_name}_{iso8601_compact_timestamp}.nc`, e.g. `SolarNowcast_DWD_2026-03-09T1200Z.nc`). KNMI_MSG and KNMI_MTG keep their own `output_filename_format` in config.yaml [!30](https://github.com/dmidk/sunflow/pull/30), @KristianHMoller
 
 ## [v1.3.0]
 

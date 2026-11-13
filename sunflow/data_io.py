@@ -688,7 +688,7 @@ def save_forecast_to_s3(
     Args:
         dataset: xarray Dataset to write, as produced by `save_forecast`.
         filename: Basename of the destination file (e.g.
-            'SolarNowcast_2026-03-09T1200Z.nc').
+            'SolarNowcast_DWD_2026-03-09T1200Z.nc').
         s3_config: S3Config object supplying bucket, output prefix, and
             endpoint URL.
         time_encoding: Encoding dict for the 'time' variable (must include at

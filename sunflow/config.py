@@ -5,7 +5,9 @@ from dataclasses import dataclass
 from typing import Self
 
 DEFAULT_ENSEMBLE_STATISTICS = "median,mean,p10,p25,p75,p90"
-DEFAULT_OUTPUT_FILENAME_FORMAT = "SolarNowcast_{iso8601_compact_timestamp}.nc"
+DEFAULT_OUTPUT_FILENAME_FORMAT = (
+    "SolarNowcast_{dataset_name}_{iso8601_compact_timestamp}.nc"
+)
 _ALLOWED_STATISTICS = {
     "median",
     "mean",
@@ -117,7 +119,8 @@ class NowcastConfig:
         - MIN_SOLAR_ELEVATION_DEGREES (default: 6)
         - ENSEMBLE_STATISTICS (default: median,mean,p10,p25,p75,p90)
         - INPUT_FILENAME_FORMAT (no default; must be set here or in config.yaml)
-        - OUTPUT_FILENAME_FORMAT (default: SolarNowcast_{iso8601_compact_timestamp}.nc)
+        - OUTPUT_FILENAME_FORMAT
+            (default: SolarNowcast_{dataset_name}_{iso8601_compact_timestamp}.nc)
         """
 
         overrides = overrides or {}

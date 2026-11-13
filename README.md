@@ -110,7 +110,7 @@ podman run -it --rm --entrypoint="" sunflow bash
 | `MIN_SOLAR_ELEVATION_DEGREES` | `6` | Minimum maximum-corner solar elevation required to run |
 | `ENSEMBLE_STATISTICS` | `median,mean,p10,p25,p75,p90` | Comma-separated list of statistics for ensemble output. Allowed: `median`, `mean`, `p10`, `p25`, `p75`, `p90` (aliases `10th_percentile`, `25th_percentile`, `75th_percentile`, `90th_percentile` are accepted). |
 | `INPUT_FILENAME_FORMAT` | None (required) | Template for input data filenames, e.g. `NetCDF4_sds_{pds_timestamp}.nc`. Must be set here or as `input_filename_format` in `config.yaml`; the environment variable takes priority. See `config.yaml` for the available template variables. |
-| `OUTPUT_FILENAME_FORMAT` | `SolarNowcast_{iso8601_compact_timestamp}.nc` | Template for forecast output filenames. Can also be set as `output_filename_format` in `config.yaml`; the environment variable takes priority. |
+| `OUTPUT_FILENAME_FORMAT` | `SolarNowcast_{dataset_name}_{iso8601_compact_timestamp}.nc` | Template for forecast output filenames. Can also be set as `output_filename_format` in `config.yaml`; the environment variable takes priority. |
 
 #### Data Source Configuration
 
@@ -132,7 +132,7 @@ podman run -it --rm --entrypoint="" sunflow bash
 
 ### Volume Mounts
 
-- `/data/nowcasts` - Forecast output files (NetCDF format), named `SolarNowcast_<YYYY-MM-DDTHHMMZ>.nc` by default (configurable via `output_filename_format` in `config.yaml`)
+- `/data/nowcasts` - Forecast output files (NetCDF format), named `SolarNowcast_<dataset>_<YYYY-MM-DDTHHMMZ>.nc` by default (configurable via `output_filename_format` in `config.yaml`)
 - `/data/satellite_data` - Input satellite data archive
 
 ### Arguments
