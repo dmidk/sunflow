@@ -9,21 +9,32 @@ KNMI_MSG:
   nc_variable_names:
     sds: sds
     sds_cs: sds_cs
-  # Required: Filename format for input data files
-  # filename_format: "{dataset_name}_{timestamp}_{domain_satellite_name}.nc"
+  # Required here or via the INPUT_FILENAME_FORMAT environment variable
+  # (the environment variable takes priority): Filename format for input data files
+  # input_filename_format: "{dataset_name}_{timestamp}_{domain_satellite_name}.nc"
   # Format for PDS data:
-  filename_format: "NetCDF4_sds_{pds_timestamp}.nc"
+  input_filename_format: "NetCDF4_sds_{pds_timestamp}.nc"
   # Available template variables:
   #   {dataset_name}: Dataset name (e.g., KNMI)
   #   {domain_satellite_name}: Satellite domain identifier (e.g., NW_EUROPE_SATELLITE)
   #   {timestamp}: Compact format YYYYMMDDHHMM
   #   {pds_timestamp}: PDS format YYYY-MM-DDTHH_MM_SSZ
+  #   {iso8601_compact_timestamp}: ISO 8601 format timestamp (e.g., YYYY-MM-DDTHHMMZ)
   #   {year}: Four-digit year (e.g., 2026)
   #   {month}: Two-digit month (e.g., 03)
   #   {day}: Two-digit day of month (e.g., 09)
   #   {hour}: Two-digit hour (e.g., 12)
   #   {second}: Two-digit second (e.g., 00)
   # Path separators are supported, e.g.: "{year}/{month}/{day}/{dataset_name}_{timestamp}.nc"
+  #
+  output_filename_format: "SolarNowcast_{timestamp}.nc"
+  # Optional: output_filename_format (or the OUTPUT_FILENAME_FORMAT environment
+  # variable, which takes priority)
+  # Filename format for output forecast files.
+  # Defaults to "SolarNowcast_{dataset_name}_{iso8601_compact_timestamp}.nc" if omitted.
+  # Supports the same template variables as input_filename_format, except
+  # {domain_satellite_name}, which is not available for output files.
+  # output_filename_format: "SolarNowcast_{dataset_name}_{iso8601_compact_timestamp}.nc"
   satellite: Meteosat Second Generation (MSG)
 
 KNMI_MTG:
@@ -36,7 +47,8 @@ KNMI_MTG:
   nc_variable_names:
     sds: sds
     sds_cs: sds_cs
-  filename_format: "NetCDF4_sds_{pds_timestamp}.nc"
+  input_filename_format: "NetCDF4_sds_{pds_timestamp}.nc"
+  output_filename_format: "SolarNowcast_MTG-CPP_{iso8601_compact_timestamp}.nc"
   input_data_frequency_minutes: 10
   satellite: Meteosat Third Generation (MTG)
 
@@ -48,16 +60,16 @@ DWD:
   nc_variable_names:
     sds: SIS
     sds_cs: SISc
-  # Required: Filename format for input data files
+  # Required here or via the INPUT_FILENAME_FORMAT environment variable: Filename format for input data files
   # Supports subdirectories via path separators, e.g.: "{year}/{month}/{day}/{dataset_name}_{timestamp}_{domain_satellite_name}.nc"
-  filename_format: "{dataset_name}_{timestamp}_{domain_satellite_name}.nc"
+  input_filename_format: "{dataset_name}_{timestamp}_{domain_satellite_name}.nc"
   satellite: Meteosat Second Generation (MSG)
 
 specMAGIC_MTG:
   nc_variable_names:
     sds: GHI
     sds_cs: CSR
-  filename_format: "GHI/GHI{year}{month}{day}{hour}{minute}.nc"
+  input_filename_format: "GHI/GHI{year}{month}{day}{hour}{minute}.nc"
   input_data_frequency_minutes: 10
   clearsky:
     method: file
@@ -68,7 +80,7 @@ specMAGIC_MTG_pvlib:
   nc_variable_names:
     sds: GHI
     sds_cs: GHI_clearsky
-  filename_format: "GHI/GHI{year}{month}{day}{hour}{minute}.nc"
+  input_filename_format: "GHI/GHI{year}{month}{day}{hour}{minute}.nc"
   input_data_frequency_minutes: 10
   clearsky:
     method: pvlib

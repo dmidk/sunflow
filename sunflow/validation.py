@@ -58,7 +58,7 @@ def validate_config(config: dict[str, Any], dataset_name: str) -> None:
     Raises:
         SystemExit: If any required key is absent.
     """
-    required_keys = ["filename_format", "satellite"]
+    required_keys = ["satellite"]
     missing = [k for k in required_keys if k not in config]
     if missing:
         logger.error(
@@ -87,6 +87,14 @@ def validate_nowcast_config(nowcast_config: NowcastConfig) -> None:
             f"Invalid nowcast configuration: Number of ensemble members "
             f"must be greater than 0. "
             f"Current value: {nowcast_config.ens_members}. Exiting.\n"
+        )
+        sys.exit(1)
+
+    if not nowcast_config.input_filename_format:
+        logger.error(
+            "No input filename format configured. Set the INPUT_FILENAME_FORMAT "
+            "environment variable or 'input_filename_format' for the dataset in "
+            "config.yaml. Exiting.\n"
         )
         sys.exit(1)
 

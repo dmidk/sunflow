@@ -8,8 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Added optional `output_filename_format` to config.yaml to configure the output file name [!30](https://github.com/dmidk/sunflow/pull/30), @KristianHMoller
+- Added `INPUT_FILENAME_FORMAT` and `OUTPUT_FILENAME_FORMAT` environment variables, which take priority over the corresponding config.yaml values [!30](https://github.com/dmidk/sunflow/pull/30), @KristianHMoller
+- Added the dataset used for the run (e.g. `KNMI_MTG`) as the `satellite_data_source` global attribute in the output file [!30](https://github.com/dmidk/sunflow/pull/30), @KristianHMoller
 - Added configuration for KNMI_MTG [!26](https://github.com/dmidk/sunflow/pull/26), @KristianHMoller
 - Added `satellite` as a required field in config.yaml to be printed in the outpt file [!26](https://github.com/dmidk/sunflow/pull/26), @KristianHMoller
+
+### Changed
+- Renamed `filename_format` to `input_filename_format` in config.yaml. It has no default and must be set in config.yaml or via `INPUT_FILENAME_FORMAT` [!30](https://github.com/dmidk/sunflow/pull/30), @KristianHMoller
+- Changed the default output filename to include the dataset name and an ISO 8601-compliant datetime (`SolarNowcast_{dataset_name}_{iso8601_compact_timestamp}.nc`, e.g. `SolarNowcast_DWD_2026-03-09T1200Z.nc`). KNMI_MSG and KNMI_MTG keep their own `output_filename_format` in config.yaml [!30](https://github.com/dmidk/sunflow/pull/30), @KristianHMoller
 
 ## [v1.3.0]
 

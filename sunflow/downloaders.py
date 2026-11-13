@@ -7,7 +7,7 @@ import requests
 import xarray as xr
 from loguru import logger
 
-from .data_io import generate_input_filename
+from .data_io import generate_filename
 from .geospatial import subset_to_bbox
 
 
@@ -74,12 +74,13 @@ def download_current_data(
     dataset_name: str,
     domain_satellite_name: str,
     satellite_data_directory: str,
+    input_filename_format: str,
 ) -> None:
     """Download satellite data for a single timestep and save it to disk.
 
     Downloads all configured variables for the requested time, merges them
     into a single dataset, and writes the result as a NetCDF file using
-    the filename format defined in config['filename_format']. The actual
+    the provided input filename format. The actual
     timestamp is taken from the dataset (not request_time) to ensure
     the filename reflects the true observation time.
 
@@ -89,11 +90,13 @@ def download_current_data(
     Args:
         request_time: Requested observation time.
         config: Dataset configuration dict from config.yaml, including
-            base_url, variables, format, crs, and filename_format.
+            base_url, variables, format and crs.
         bbox: Bounding box string lon_min,lat_min,lon_max,lat_max.
         dataset_name: Name of the dataset source.
         domain_satellite_name: Satellite domain identifier used in the output filename.
         satellite_data_directory: Directory where the NetCDF file is saved.
+        input_filename_format: Template string for the saved filename (from
+            NowcastConfig.input_filename_format).
     """
     if dataset_name in ["KNMI_MSG", "KNMI_MTG"]:
         datasets = []
@@ -119,11 +122,11 @@ def download_current_data(
 
     # Save data
     current_time_dt = current_time.astype("datetime64[s]").astype(datetime)
-    filename = generate_input_filename(
+    filename = generate_filename(
         current_time_dt,
         dataset_name,
+        input_filename_format,
         domain_satellite_name,
-        config["filename_format"],
     )
     output_path = os.path.join(satellite_data_directory, filename)
     merged_ds.to_netcdf(output_path)

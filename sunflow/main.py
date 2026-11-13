@@ -252,7 +252,7 @@ def run_nowcast(
     nc_variable_names = config["nc_variable_names"].copy()
     clearsky_config = config.get(
         "clearsky",
-        {"method": "file", "path": config["filename_format"]},
+        {"method": "file", "path": nowcast_config.input_filename_format},
     )
 
     # Fetch current data (with retry loop in operational mode)
@@ -313,7 +313,7 @@ def run_nowcast(
                 domain_satellite_name,
                 nowcast_config.satellite_data_directory,
                 "past data",
-                config["filename_format"],
+                nowcast_config.input_filename_format,
                 bbox=domain_satellite,
             )
         case "s3":
@@ -323,7 +323,7 @@ def run_nowcast(
                 domain_satellite_name,
                 s3_config,
                 "past data",
-                config["filename_format"],
+                nowcast_config.input_filename_format,
                 bbox=domain_satellite,
             )
 
@@ -344,7 +344,7 @@ def run_nowcast(
                 nc_variable_names["sds_cs"],
             )
         )
-    elif clearsky_config["path"] != config["filename_format"]:
+    elif clearsky_config["path"] != nowcast_config.input_filename_format:
         logger.info("Loading separate clearsky data for past observations...")
         clearsky_data = fetch_clearsky_with_fallback(
             past_time_steps,
@@ -479,12 +479,12 @@ def run_nowcast(
 
     if full_ensemble:
         output_forecast = solar_forecast
-        output_mode = "full_ensemble"
+        output_mode = "Full ensemble"
         logger.info("Saving full ensemble forecast")
     else:
         if solar_forecast.shape[0] == 1:
             output_forecast = solar_forecast
-            output_mode = "deterministic"
+            output_mode = "Deterministic"
             logger.info(
                 "Saving deterministic forecast "
                 "(single ensemble member, kept as singleton ensemble dimension)"
@@ -494,7 +494,7 @@ def run_nowcast(
                 solar_forecast,
                 nowcast_config.ensemble_statistics,
             )
-            output_mode = "ensemble_statistics"
+            output_mode = "Ensemble statistics"
             logger.info(
                 "Saving ensemble statistics across members: "
                 f"{', '.join(nowcast_config.ensemble_statistics)} "
