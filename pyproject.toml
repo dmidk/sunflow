@@ -1,6 +1,6 @@
 [project]
 name = "sunflow"
-version = "1.3.0"
+version = "1.4.0"
 description = "Optical flow solar nowcasting based on satellite data"
 authors = [
     {name = "Irene Livia Kruse", email = "ikr@dmi.dk"},
