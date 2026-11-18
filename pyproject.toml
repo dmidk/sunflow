@@ -39,7 +39,13 @@ build-backend = "pdm.backend"
 [tool.isort]
 profile = "black"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
 [dependency-groups]
 dev = [
     "pre-commit>=4.3.0",
+    "pytest>=8.3.0",
+    "pytest-cov>=6.0.0",
 ]

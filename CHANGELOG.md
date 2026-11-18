@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Added a pytest test suite in `tests/` covering configuration, time handling, geospatial helpers, filename generation, file I/O, validation, the forecast pipeline, the CLI, and end-to-end nowcast runs in `files` mode, @elenibriola
+- Added a `Tests` GitHub Actions workflow running the suite with coverage on every push and pull request, @elenibriola
+- Added `pytest` and `pytest-cov` as development dependencies, @elenibriola
+
 ## [v1.4.0]
 
 ### Added

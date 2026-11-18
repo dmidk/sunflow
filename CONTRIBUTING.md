@@ -20,6 +20,25 @@ Before contributing, follow the local development setup steps in the README.
 
 ## Development Guidelines
 
+### Tests
+
+The test suite lives in `tests/` and runs offline — synthetic NetCDF input is
+generated in temporary directories, so no credentials or satellite data are needed.
+
+Run it before opening a pull request:
+
+```bash
+uv run pytest
+```
+
+When you add or change behaviour, add tests covering it in the module that
+mirrors the code you touched (for example `tests/test_forecast.py` for
+`sunflow/forecast.py`). Shared helpers for building configs and datasets are
+fixtures in `tests/conftest.py`. End-to-end pipeline runs belong in
+`tests/test_run_nowcast.py`.
+
+The suite also runs on every push and pull request via GitHub Actions, together
+with the pre-commit linters.
 
 ### Commits
 

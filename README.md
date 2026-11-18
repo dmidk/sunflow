@@ -42,6 +42,33 @@ or, after activating the virtualenv (`source .venv/bin/activate`):
 sunflow
 ```
 
+## Running the tests
+The test suite is written with [pytest](https://docs.pytest.org/) and lives in `tests/`.
+It runs fully offline: no network access, credentials or real satellite data are
+required, as the tests generate synthetic NetCDF input in temporary directories.
+
+```shell
+uv run pytest
+```
+
+To see which lines are covered:
+
+```shell
+uv run pytest --cov=sunflow --cov-report=term-missing
+```
+
+Useful variations:
+
+```shell
+uv run pytest tests/test_forecast.py        # one module
+uv run pytest -k clearsky                   # tests matching a keyword
+uv run pytest -x -vv                        # stop at the first failure, verbose
+```
+
+Both the tests and the pre-commit linters run automatically on every push and
+pull request via GitHub Actions (`.github/workflows/tests.yml` and
+`.github/workflows/pre-commit.yml`).
+
 ## Container Usage
 
 ### Building the Image
