@@ -261,9 +261,9 @@ class TestCropForecastToDomain:
     def test_cropped_values_match_the_original_grid(self):
         latitudes = np.arange(50.0, 56.0)
         longitudes = np.arange(0.0, 6.0)
-        forecast = np.arange(
-            1 * len(latitudes) * len(longitudes), dtype=float
-        ).reshape(1, len(latitudes), len(longitudes))
+        forecast = np.arange(1 * len(latitudes) * len(longitudes), dtype=float).reshape(
+            1, len(latitudes), len(longitudes)
+        )
 
         cropped, lats, lons = crop_forecast_to_domain(
             forecast, latitudes, longitudes, "1,51,3,53"

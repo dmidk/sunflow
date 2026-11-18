@@ -29,7 +29,11 @@ def parser():
 class TestValidateCustomDomain:
     def test_valid_custom_domain_passes(self, parser):
         validate_custom_domain(
-            parser, "CUSTOM", "4,50,18,62", "--domain_satellite", "--custom_domain_satellite"
+            parser,
+            "CUSTOM",
+            "4,50,18,62",
+            "--domain_satellite",
+            "--custom_domain_satellite",
         )
 
     def test_predefined_domain_without_a_custom_value_passes(self, parser):
@@ -53,7 +57,11 @@ class TestValidateCustomDomain:
     def test_malformed_custom_domain_is_reported(self, parser, capsys):
         with pytest.raises(SystemExit):
             validate_custom_domain(
-                parser, "CUSTOM", "4,50,18", "--domain_satellite", "--custom_domain_satellite"
+                parser,
+                "CUSTOM",
+                "4,50,18",
+                "--domain_satellite",
+                "--custom_domain_satellite",
             )
 
         assert "Invalid --custom_domain_satellite format" in capsys.readouterr().err
@@ -61,7 +69,11 @@ class TestValidateCustomDomain:
     def test_reversed_bounds_are_reported(self, parser, capsys):
         with pytest.raises(SystemExit):
             validate_custom_domain(
-                parser, "CUSTOM", "18,50,4,62", "--domain_satellite", "--custom_domain_satellite"
+                parser,
+                "CUSTOM",
+                "18,50,4,62",
+                "--domain_satellite",
+                "--custom_domain_satellite",
             )
 
         assert "lon_min must be smaller" in capsys.readouterr().err

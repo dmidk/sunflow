@@ -99,9 +99,7 @@ class TestPreprocessData:
             time_steps, np.full((2, 3, 4), 300.0), np.full((2, 3, 4), 600.0)
         ).rename({"sds": "SIS", "sds_cs": "SISc"})
 
-        ratio, _, _ = preprocess_data(
-            data, time_steps, {"sds": "SIS", "sds_cs": "SISc"}
-        )
+        ratio, _, _ = preprocess_data(data, time_steps, {"sds": "SIS", "sds_cs": "SISc"})
 
         np.testing.assert_allclose(ratio, 0.5)
 
@@ -121,9 +119,7 @@ class TestMultiplyClearsky:
     ):
         ratio_forecast = np.full((3, 3, 4), 0.5)
 
-        solar = multiply_clearsky(
-            ratio_forecast, clearsky, time_steps, NC_VARIABLE_NAMES
-        )
+        solar = multiply_clearsky(ratio_forecast, clearsky, time_steps, NC_VARIABLE_NAMES)
 
         assert solar.shape == (1, 3, 3, 4)
         np.testing.assert_allclose(solar, 400.0)
@@ -131,9 +127,7 @@ class TestMultiplyClearsky:
     def test_ensemble_forecast_keeps_its_ensemble_dimension(self, clearsky, time_steps):
         ratio_forecast = np.full((5, 3, 3, 4), 0.25)
 
-        solar = multiply_clearsky(
-            ratio_forecast, clearsky, time_steps, NC_VARIABLE_NAMES
-        )
+        solar = multiply_clearsky(ratio_forecast, clearsky, time_steps, NC_VARIABLE_NAMES)
 
         assert solar.shape == (5, 3, 3, 4)
         np.testing.assert_allclose(solar, 200.0)
@@ -150,9 +144,7 @@ class TestMultiplyClearsky:
         )
         ratio_forecast = np.full((3, 3, 4), 0.5)
 
-        solar = multiply_clearsky(
-            ratio_forecast, clearsky, time_steps, NC_VARIABLE_NAMES
-        )
+        solar = multiply_clearsky(ratio_forecast, clearsky, time_steps, NC_VARIABLE_NAMES)
 
         np.testing.assert_allclose(solar[0, 0], 50.0)
         np.testing.assert_allclose(solar[0, 1], 100.0)
@@ -161,9 +153,7 @@ class TestMultiplyClearsky:
     def test_nan_ratios_propagate(self, clearsky, time_steps):
         ratio_forecast = np.full((3, 3, 4), np.nan)
 
-        solar = multiply_clearsky(
-            ratio_forecast, clearsky, time_steps, NC_VARIABLE_NAMES
-        )
+        solar = multiply_clearsky(ratio_forecast, clearsky, time_steps, NC_VARIABLE_NAMES)
 
         assert np.isnan(solar).all()
 
@@ -186,9 +176,7 @@ class TestMultiplyClearsky:
     @pytest.mark.parametrize("shape", [(3,), (3, 4), (2, 3, 4, 5, 6)])
     def test_unsupported_dimensionality_is_rejected(self, clearsky, time_steps, shape):
         with pytest.raises(ValueError, match="must have shape"):
-            multiply_clearsky(
-                np.zeros(shape), clearsky, time_steps, NC_VARIABLE_NAMES
-            )
+            multiply_clearsky(np.zeros(shape), clearsky, time_steps, NC_VARIABLE_NAMES)
 
     def test_missing_clearsky_time_step_is_reported(self, clearsky, time_steps):
         extra_step = time_steps[-1] + timedelta(minutes=15)
@@ -228,9 +216,7 @@ class TestPrependT0:
         )
         config = {"nc_variable_names": NC_VARIABLE_NAMES}
 
-        result = prepend_t0(
-            clearsky, ratio_data, np.zeros((1, 2, 3, 4)), config, t0_time
-        )
+        result = prepend_t0(clearsky, ratio_data, np.zeros((1, 2, 3, 4)), config, t0_time)
 
         np.testing.assert_allclose(result[:, 0], 0.9 * 800.0)
 
@@ -251,9 +237,7 @@ class TestPrependT0:
         config = {"nc_variable_names": NC_VARIABLE_NAMES}
 
         with pytest.raises(ValueError, match="Spatial shape mismatch"):
-            prepend_t0(
-                clearsky, ratio_data, np.zeros((1, 2, 5, 6)), config, t0_time
-            )
+            prepend_t0(clearsky, ratio_data, np.zeros((1, 2, 5, 6)), config, t0_time)
 
 
 class TestComputeEnsembleStatistics:
@@ -261,9 +245,7 @@ class TestComputeEnsembleStatistics:
     def forecast(self):
         # 11 members holding values 0, 100, ..., 1000 at every grid point, so
         # percentiles are exact and easy to reason about.
-        return np.stack(
-            [np.full((2, 3, 4), 100.0 * member) for member in range(11)]
-        )
+        return np.stack([np.full((2, 3, 4), 100.0 * member) for member in range(11)])
 
     def test_requested_statistics_are_returned(self, forecast):
         computed = compute_ensemble_statistics(forecast, ["median", "mean", "p90"])
@@ -297,9 +279,7 @@ class TestComputeEnsembleStatistics:
 
         computed = compute_ensemble_statistics(forecast, ["mean"])
 
-        np.testing.assert_allclose(
-            computed["mean"], forecast.mean(axis=0, keepdims=True)
-        )
+        np.testing.assert_allclose(computed["mean"], forecast.mean(axis=0, keepdims=True))
 
     def test_a_single_member_reduces_to_itself(self):
         forecast = np.random.default_rng(0).random((1, 2, 3, 4))
@@ -385,10 +365,7 @@ class TestProbabilisticAdvectionForecast:
         # A moving diagonal band gives the advection model a real signal to carry.
         rows, cols = np.meshgrid(np.arange(32), np.arange(32), indexing="ij")
         return np.stack(
-            [
-                0.5 + 0.4 * np.sin((rows + cols - 3.0 * step) / 6.0)
-                for step in range(4)
-            ]
+            [0.5 + 0.4 * np.sin((rows + cols - 3.0 * step) / 6.0) for step in range(4)]
         ).astype(np.float64)
 
     @pytest.fixture
@@ -416,9 +393,7 @@ class TestProbabilisticAdvectionForecast:
             ratio_data, motion_field, n_steps=2, ens_members=1, alpha=0.0, beta=0.0
         )
 
-        np.testing.assert_allclose(
-            np.squeeze(forecast)[0], ratio_data[-1], atol=1e-6
-        )
+        np.testing.assert_allclose(np.squeeze(forecast)[0], ratio_data[-1], atol=1e-6)
 
     def test_noise_free_ensemble_members_are_identical(self, ratio_data, motion_field):
         forecast = probabilistic_advection_forecast(

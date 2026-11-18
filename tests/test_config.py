@@ -102,7 +102,14 @@ class TestNowcastConfigDefaults:
         assert config.satellite_data_directory == "."
         assert config.max_clearsky_fallback_days == 3
         assert config.min_solar_elevation_degrees == 6
-        assert config.ensemble_statistics == ["median", "mean", "p10", "p25", "p75", "p90"]
+        assert config.ensemble_statistics == [
+            "median",
+            "mean",
+            "p10",
+            "p25",
+            "p75",
+            "p90",
+        ]
         assert config.input_filename_format is None
         assert config.output_filename_format == DEFAULT_OUTPUT_FILENAME_FORMAT
 

@@ -103,9 +103,7 @@ class TestDownloadNetcdfDwd:
 
     @pytest.mark.parametrize("status_code", [404, 500])
     def test_error_responses_raise(self, monkeypatch, status_code):
-        monkeypatch.setattr(
-            requests, "get", lambda url: FakeResponse(b"", status_code)
-        )
+        monkeypatch.setattr(requests, "get", lambda url: FakeResponse(b"", status_code))
 
         with pytest.raises(requests.exceptions.HTTPError):
             download_netcdf_dwd("https://opendata.dwd.de/file.nc")

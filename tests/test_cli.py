@@ -81,7 +81,9 @@ class TestTimeParsing:
             run_cli("--time", "yesterday")
 
     def test_a_time_span_is_accepted(self, run_cli):
-        args = run_cli("--start_time", "2026-03-09T12:00Z", "--end_time", "2026-03-09T15:00Z")
+        args = run_cli(
+            "--start_time", "2026-03-09T12:00Z", "--end_time", "2026-03-09T15:00Z"
+        )
 
         assert args.start_time == datetime(2026, 3, 9, 12, 0, tzinfo=timezone.utc)
         assert args.end_time == datetime(2026, 3, 9, 15, 0, tzinfo=timezone.utc)

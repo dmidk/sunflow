@@ -113,7 +113,9 @@ class TestCheckCurrentDataExistenceFile:
                 required_domain="-10.75,47.25,20,63.5",
             )
 
-    def test_sufficient_coverage_passes_the_domain_check(self, tmp_path, write_input_file):
+    def test_sufficient_coverage_passes_the_domain_check(
+        self, tmp_path, write_input_file
+    ):
         write_input_file(
             tmp_path / "DWD_202603091230.nc",
             np.arange(40.0, 70.0),
