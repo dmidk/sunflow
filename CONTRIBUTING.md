@@ -20,6 +20,26 @@ Before contributing, follow the local development setup steps in the README.
 
 ## Development Guidelines
 
+### Tests
+
+Run `uv run pytest` and `uv run pre-commit run --all-files` before opening a
+pull request. See [Running the tests](README.md#running-the-tests) in the README
+for the available commands and for what the offline suite does and does not cover.
+
+When adding tests:
+
+- Put them in the module mirroring the code you touched (`tests/test_forecast.py`
+  for `sunflow/forecast.py`, and so on). Full-pipeline runs belong in
+  `tests/test_run_nowcast.py`.
+- Reuse the fixtures in `tests/conftest.py` for configurations, synthetic
+  datasets, temporary NetCDF files and the mocked S3 filesystem rather than
+  rebuilding them.
+- Keep tests offline and deterministic: no network, no credentials, no reliance
+  on the current date or on test execution order. Use `tmp_path` for files.
+- Prefer small numerical examples whose expected result you can work out by
+  hand, instead of re-implementing the function under test in the assertion.
+- Name tests after the behaviour they pin down, and assert on that behaviour
+  rather than on incidental details.
 
 ### Commits
 
