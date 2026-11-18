@@ -130,9 +130,7 @@ class TestDeterministicRun:
 
         assert (Path(config.nowcast_directory) / result.filename).is_file()
 
-    def test_output_has_the_analysis_step_plus_every_forecast_step(
-        self, nowcast_config
-    ):
+    def test_output_has_the_analysis_step_plus_every_forecast_step(self, nowcast_config):
         config = nowcast_config()
 
         result = run(config)
@@ -182,9 +180,7 @@ class TestDeterministicRun:
                 lon=slice(ds.lon.min(), ds.lon.max()),
             )
 
-        np.testing.assert_allclose(
-            analysis, expected_ratio.values * 800.0, rtol=1e-5
-        )
+        np.testing.assert_allclose(analysis, expected_ratio.values * 800.0, rtol=1e-5)
 
     def test_global_attributes_describe_the_run(self, nowcast_config):
         config = nowcast_config()
@@ -239,7 +235,9 @@ class TestEnsembleRun:
 
 
 class TestSkipAndFailureBehaviour:
-    def test_a_run_is_skipped_when_the_sun_is_too_low(self, tmp_path, grid, nowcast_config):
+    def test_a_run_is_skipped_when_the_sun_is_too_low(
+        self, tmp_path, grid, nowcast_config
+    ):
         latitudes, longitudes = grid
         night = datetime(2026, 12, 21, 0, 0, tzinfo=timezone.utc)
         config = nowcast_config()
@@ -266,11 +264,8 @@ class TestSkipAndFailureBehaviour:
         config = nowcast_config()
         clearsky_t0 = NOWCAST_TIME - timedelta(days=1)
         for i in range(FUTURE_STEPS + 1):
-            path = satellite_data / (
-                f"DWD_{(clearsky_t0 + timedelta(minutes=FREQUENCY_MINUTES * i))
-                      .strftime('%Y%m%d%H%M')}.nc"
-            )
-            path.unlink()
+            time_step = clearsky_t0 + timedelta(minutes=FREQUENCY_MINUTES * i)
+            (satellite_data / f"DWD_{time_step.strftime('%Y%m%d%H%M')}.nc").unlink()
 
         with pytest.raises(RuntimeError, match="Missing clearsky data"):
             run(config)
