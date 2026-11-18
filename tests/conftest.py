@@ -34,6 +34,19 @@ _NOWCAST_CONFIG_DEFAULTS = {
 }
 
 
+@pytest.fixture
+def restore_random_state():
+    """Restore numpy's global random state after a test that seeds it.
+
+    Production code seeds each ensemble member itself, so tests normally have
+    no reason to touch the global state. The one test that deliberately does
+    uses this fixture so it cannot leak into whatever runs next.
+    """
+    state = np.random.get_state()
+    yield
+    np.random.set_state(state)
+
+
 @pytest.fixture(scope="session")
 def make_nowcast_config():
     """Build a NowcastConfig from explicit values, bypassing the environment."""
@@ -148,7 +161,16 @@ class FakeS3FileSystem:
 
 
 class _S3WriteBuffer(BytesIO):
-    """Writable buffer that stores its contents on the filesystem when closed."""
+    """Writable buffer that stores its contents on the filesystem when closed.
+
+    Interrupted writes are *not* modelled: whatever has been written is stored
+    when the buffer closes, including when the `with` block is leaving because
+    of an exception. Real object storage would discard an aborted upload
+    instead, leaving the key absent or at its previous version. To exercise a
+    failing upload, register the error in `FakeS3FileSystem.open_failures` so
+    `open` raises before any bytes are written, rather than relying on a
+    partially written buffer being discarded here.
+    """
 
     def __init__(self, filesystem: FakeS3FileSystem, path: str):
         super().__init__()

@@ -457,10 +457,12 @@ class TestCorruptAndIncompleteInput:
         return [base + timedelta(minutes=15 * i) for i in range(3)]
 
     def test_a_file_that_is_not_netcdf_raises_when_loaded(self, tmp_path, time_steps):
-        # xarray reports an unreadable file by exhausting its backends.
+        # xarray reports an unreadable file by exhausting its IO backends.
+        # Only the exception type is pinned: the wording belongs to xarray and
+        # changes between releases.
         (tmp_path / "DWD_202603091200.nc").write_bytes(b"this is not a NetCDF file")
 
-        with pytest.raises(ValueError, match="did not find a match"):
+        with pytest.raises(ValueError):
             load_data_from_files(
                 time_steps[:1],
                 "DWD",
@@ -476,7 +478,7 @@ class TestCorruptAndIncompleteInput:
     ):
         (tmp_path / "DWD_202603091200.nc").write_bytes(b"this is not a NetCDF file")
 
-        with pytest.raises(ValueError, match="did not find a match"):
+        with pytest.raises(ValueError):
             check_current_data_existence_file(
                 time_steps[0],
                 "DWD",

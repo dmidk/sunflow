@@ -646,7 +646,7 @@ class TestEnsembleReproducibility:
         np.testing.assert_array_equal(first, second)
 
     def test_the_result_does_not_depend_on_the_global_random_state(
-        self, ratio_data, motion_field
+        self, ratio_data, motion_field, restore_random_state
     ):
         baseline = self.forecast(ratio_data, motion_field)
 

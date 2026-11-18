@@ -563,10 +563,12 @@ class TestSkipAndFailureBehaviour:
     def test_an_input_file_that_is_not_netcdf_is_reported(
         self, input_directory, mutable_config
     ):
+        # Pin the exception type only; the message comes from xarray and
+        # changes between releases.
         path = input_directory / f"DWD_{NOWCAST_TIME.strftime('%Y%m%d%H%M')}.nc"
         path.write_bytes(b"not a NetCDF file")
 
-        with pytest.raises(ValueError, match="did not find a match"):
+        with pytest.raises(ValueError):
             execute(mutable_config())
 
     def test_a_domain_larger_than_the_input_grid_is_rejected(self, mutable_config):

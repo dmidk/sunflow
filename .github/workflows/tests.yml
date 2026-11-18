@@ -16,12 +16,14 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      # setup-uv installs the Python version pinned in pyproject.toml
-      # (requires-python) and caches the resolved environment keyed on uv.lock.
+      # setup-uv provisions Python and caches the resolved environment keyed on
+      # uv.lock. uv itself is pinned so CI resolves exactly as it does locally.
+      # setup-uv publishes no floating major tag beyond v7, so pin the exact
+      # release rather than a moving one.
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           version: "0.9.10"
           python-version: "3.12"
@@ -46,7 +48,7 @@ jobs:
 
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: |
