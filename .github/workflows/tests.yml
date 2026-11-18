@@ -5,6 +5,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# The suite only reads the repository; no packages or deployments are touched.
+permissions:
+  contents: read
+
 jobs:
   pytest:
     name: Run tests
@@ -14,19 +18,23 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      # setup-uv installs the Python version pinned in pyproject.toml
+      # (requires-python) and caches the resolved environment keyed on uv.lock.
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           version: "0.9.10"
+          python-version: "3.12"
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-
-      - name: Set up Python
-        run: uv python install 3.12
 
       - name: Install dependencies
         run: uv sync --frozen
 
+      # The suite is deterministic, so coverage is stable run to run. The
+      # threshold sits a few points below the current measured figure (~80%):
+      # high enough to catch a meaningful regression, low enough not to fail on
+      # ordinary churn. Raise it as coverage improves.
       - name: Run tests
         run: >-
           uv run --frozen pytest
@@ -34,13 +42,15 @@ jobs:
           --cov-report=term-missing
           --cov-report=xml
           --junitxml=junit.xml
+          --cov-fail-under=75
 
       - name: Upload test results
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: |
             junit.xml
             coverage.xml
+          if-no-files-found: warn
           retention-days: 14

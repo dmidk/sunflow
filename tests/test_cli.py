@@ -5,8 +5,9 @@ from pathlib import Path
 
 import pytest
 import yaml
+from loguru import logger
 
-from sunflow.main import parse_arguments
+from sunflow.main import RunResult, RunStatus, parse_arguments, print_run_summary
 from sunflow.validation import validate_config
 
 
@@ -173,6 +174,62 @@ class TestDomainArguments:
         )
 
         assert args.custom_domain_nowcast == "4,50,18,62"
+
+
+class TestRunSummary:
+    """The summary is the operator-facing report at the end of a run."""
+
+    @pytest.fixture
+    def captured_logs(self):
+        messages = []
+        sink_id = logger.add(lambda message: messages.append(message), level="INFO")
+        yield messages
+        logger.remove(sink_id)
+
+    def result(self, status, minute, **kwargs):
+        return RunResult(
+            status=status,
+            time_step=datetime(2026, 3, 9, 12, minute, tzinfo=timezone.utc),
+            **kwargs,
+        )
+
+    def test_successes_skips_and_failures_are_counted(self, captured_logs):
+        results = [
+            self.result(RunStatus.SUCCESS, 0, filename="a.nc"),
+            self.result(RunStatus.SUCCESS, 15, filename="b.nc"),
+            self.result(RunStatus.SKIPPED, 30, reason="sun too low"),
+        ]
+        failures = [(datetime(2026, 3, 9, 12, 45, tzinfo=timezone.utc), "no data")]
+
+        print_run_summary(results, failures)
+
+        assert "2 success, 1 skipped, 1 failed" in "".join(captured_logs)
+
+    def test_skipped_timesteps_are_listed(self, captured_logs):
+        results = [self.result(RunStatus.SKIPPED, 30, reason="sun too low")]
+
+        print_run_summary(results, [])
+
+        assert "2026-03-09T12:30:00Z" in "".join(captured_logs)
+
+    def test_failed_timesteps_are_listed_with_their_reason(self, captured_logs):
+        failures = [(datetime(2026, 3, 9, 12, 45, tzinfo=timezone.utc), "no data")]
+
+        print_run_summary([], failures)
+
+        logged = "".join(captured_logs)
+        assert "2026-03-09T12:45:00Z" in logged
+        assert "no data" in logged
+
+    def test_an_all_successful_run_lists_nothing_extra(self, captured_logs):
+        results = [self.result(RunStatus.SUCCESS, 0, filename="a.nc")]
+
+        print_run_summary(results, [])
+
+        logged = "".join(captured_logs)
+        assert "1 success, 0 skipped, 0 failed" in logged
+        assert "Skipped timesteps" not in logged
+        assert "Failed timesteps" not in logged
 
 
 class TestShippedConfigYaml:

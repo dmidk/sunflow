@@ -22,23 +22,24 @@ Before contributing, follow the local development setup steps in the README.
 
 ### Tests
 
-The test suite lives in `tests/` and runs offline — synthetic NetCDF input is
-generated in temporary directories, so no credentials or satellite data are needed.
+Run `uv run pytest` and `uv run pre-commit run --all-files` before opening a
+pull request. See [Running the tests](README.md#running-the-tests) in the README
+for the available commands and for what the offline suite does and does not cover.
 
-Run it before opening a pull request:
+When adding tests:
 
-```bash
-uv run pytest
-```
-
-When you add or change behaviour, add tests covering it in the module that
-mirrors the code you touched (for example `tests/test_forecast.py` for
-`sunflow/forecast.py`). Shared helpers for building configs and datasets are
-fixtures in `tests/conftest.py`. End-to-end pipeline runs belong in
-`tests/test_run_nowcast.py`.
-
-The suite also runs on every push and pull request via GitHub Actions, together
-with the pre-commit linters.
+- Put them in the module mirroring the code you touched (`tests/test_forecast.py`
+  for `sunflow/forecast.py`, and so on). Full-pipeline runs belong in
+  `tests/test_run_nowcast.py`.
+- Reuse the fixtures in `tests/conftest.py` for configurations, synthetic
+  datasets, temporary NetCDF files and the mocked S3 filesystem rather than
+  rebuilding them.
+- Keep tests offline and deterministic: no network, no credentials, no reliance
+  on the current date or on test execution order. Use `tmp_path` for files.
+- Prefer small numerical examples whose expected result you can work out by
+  hand, instead of re-implementing the function under test in the assertion.
+- Name tests after the behaviour they pin down, and assert on that behaviour
+  rather than on incidental details.
 
 ### Commits
 

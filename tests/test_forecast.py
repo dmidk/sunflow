@@ -103,6 +103,77 @@ class TestPreprocessData:
 
         np.testing.assert_allclose(ratio, 0.5)
 
+    def test_ratios_are_computed_pixel_by_pixel(self, time_steps):
+        # Each pixel has its own observed and clearsky value, so a transposed
+        # or flattened array would not reproduce the expected result.
+        sds = np.array([[[100.0, 200.0], [300.0, 400.0]]] * 2)
+        sds_cs = np.array([[[400.0, 400.0], [600.0, 800.0]]] * 2)
+        data = make_observation_dataset(time_steps, sds, sds_cs)
+
+        ratio, _, _ = preprocess_data(data, time_steps, NC_VARIABLE_NAMES)
+
+        expected = np.array([[0.25, 0.5], [0.5, 0.5]])
+        np.testing.assert_allclose(ratio[0], expected)
+        np.testing.assert_allclose(ratio[1], expected)
+
+    def test_non_square_spatial_dimensions_are_preserved_in_order(self, time_steps):
+        sds = np.full((2, 3, 7), 400.0)
+        sds_cs = np.full((2, 3, 7), 800.0)
+        data = make_observation_dataset(time_steps, sds, sds_cs)
+
+        ratio, latitudes, longitudes = preprocess_data(
+            data, time_steps, NC_VARIABLE_NAMES
+        )
+
+        assert ratio.shape == (2, 3, 7)
+        assert len(latitudes) == 3
+        assert len(longitudes) == 7
+
+    def test_time_steps_are_selected_by_label_not_by_storage_order(self, time_steps):
+        # The dataset is stored in reverse order; selection must still follow
+        # the order of the requested time steps.
+        sds = np.stack([np.full((3, 4), 100.0), np.full((3, 4), 800.0)])
+        sds_cs = np.full((2, 3, 4), 1000.0)
+        data = make_observation_dataset(time_steps, sds, sds_cs).isel(
+            time=slice(None, None, -1)
+        )
+
+        ratio, _, _ = preprocess_data(data, time_steps, NC_VARIABLE_NAMES)
+
+        np.testing.assert_allclose(ratio[0], 0.1)
+        np.testing.assert_allclose(ratio[1], 0.8)
+
+    def test_missing_observations_propagate_as_nan(self, time_steps):
+        sds = np.full((2, 3, 4), 400.0)
+        sds[0, 1, 1] = np.nan
+        sds_cs = np.full((2, 3, 4), 800.0)
+        data = make_observation_dataset(time_steps, sds, sds_cs)
+
+        ratio, _, _ = preprocess_data(data, time_steps, NC_VARIABLE_NAMES)
+
+        assert np.isnan(ratio[0, 1, 1])
+        np.testing.assert_allclose(ratio[0, 0, 0], 0.5)
+
+    def test_a_missing_clearsky_variable_is_reported(self, time_steps):
+        data = make_observation_dataset(
+            time_steps, np.full((2, 3, 4), 400.0), np.full((2, 3, 4), 800.0)
+        ).drop_vars("sds_cs")
+
+        with pytest.raises(KeyError, match="sds_cs"):
+            preprocess_data(data, time_steps, NC_VARIABLE_NAMES)
+
+    def test_a_dataset_without_a_time_dimension_is_reported(self, time_steps):
+        data = xr.Dataset(
+            {
+                "sds": (["lat", "lon"], np.full((3, 4), 400.0)),
+                "sds_cs": (["lat", "lon"], np.full((3, 4), 800.0)),
+            },
+            coords={"lat": np.arange(3.0), "lon": np.arange(4.0)},
+        )
+
+        with pytest.raises(KeyError, match="time"):
+            preprocess_data(data, time_steps, NC_VARIABLE_NAMES)
+
 
 class TestMultiplyClearsky:
     @pytest.fixture
@@ -188,6 +259,45 @@ class TestMultiplyClearsky:
                 time_steps + [extra_step],
                 NC_VARIABLE_NAMES,
             )
+
+    def test_clearsky_varies_per_pixel_as_well_as_per_step(
+        self, time_steps, make_clearsky_dataset
+    ):
+        # A clearsky field that differs in every cell catches broadcasting
+        # mistakes that a spatially uniform field would hide.
+        values = np.arange(3 * 3 * 4, dtype=float).reshape(3, 3, 4) * 10.0
+        clearsky = make_clearsky_dataset(time_steps, shape=(3, 4), values=values)
+        ratio_forecast = np.full((3, 3, 4), 0.5)
+
+        solar = multiply_clearsky(ratio_forecast, clearsky, time_steps, NC_VARIABLE_NAMES)
+
+        np.testing.assert_allclose(solar[0], values * 0.5)
+
+    def test_every_ensemble_member_uses_the_same_clearsky_field(
+        self, time_steps, make_clearsky_dataset
+    ):
+        values = np.arange(3 * 3 * 4, dtype=float).reshape(3, 3, 4) * 10.0
+        clearsky = make_clearsky_dataset(time_steps, shape=(3, 4), values=values)
+        # Distinct ratio per member, so a mis-broadcast member is detectable.
+        ratio_forecast = np.stack([np.full((3, 3, 4), 0.2), np.full((3, 3, 4), 0.4)])
+
+        solar = multiply_clearsky(ratio_forecast, clearsky, time_steps, NC_VARIABLE_NAMES)
+
+        np.testing.assert_allclose(solar[0], values * 0.2)
+        np.testing.assert_allclose(solar[1], values * 0.4)
+
+    def test_a_zero_clearsky_field_yields_zero_irradiance(
+        self, time_steps, make_clearsky_dataset
+    ):
+        clearsky = make_clearsky_dataset(
+            time_steps, shape=(3, 4), values=np.zeros((3, 3, 4))
+        )
+
+        solar = multiply_clearsky(
+            np.full((3, 3, 4), 0.5), clearsky, time_steps, NC_VARIABLE_NAMES
+        )
+
+        np.testing.assert_array_equal(solar, np.zeros((1, 3, 3, 4)))
 
 
 class TestPrependT0:
@@ -296,6 +406,69 @@ class TestComputeEnsembleStatistics:
     def test_no_statistics_yields_an_empty_mapping(self, forecast):
         assert compute_ensemble_statistics(forecast, []) == {}
 
+    @pytest.mark.parametrize(
+        "statistic,expected",
+        [
+            # numpy's default linear interpolation places the requested
+            # percentile at position q/100 * (n - 1) along the sorted members.
+            # With four members 0, 1, 2, 3 that position is:
+            #   p10 -> 0.30, p25 -> 0.75, p75 -> 2.25, p90 -> 2.70
+            ("p10", 0.30),
+            ("p25", 0.75),
+            ("p75", 2.25),
+            ("p90", 2.70),
+            ("median", 1.5),
+            ("mean", 1.5),
+        ],
+    )
+    def test_percentiles_use_linear_interpolation_between_members(
+        self, statistic, expected
+    ):
+        # Four members makes every percentile fall between two members, which
+        # distinguishes linear interpolation from nearest/lower/higher.
+        forecast = np.arange(4, dtype=float).reshape(4, 1, 1, 1)
+
+        computed = compute_ensemble_statistics(forecast, [statistic])
+
+        np.testing.assert_allclose(computed[statistic], expected)
+
+    def test_statistics_reduce_only_the_ensemble_axis(self):
+        # Values vary along every axis; only axis 0 may be collapsed.
+        forecast = np.arange(3 * 2 * 4 * 5, dtype=float).reshape(3, 2, 4, 5)
+
+        computed = compute_ensemble_statistics(forecast, ["median", "p25"])
+
+        for values in computed.values():
+            assert values.shape == (1, 2, 4, 5)
+        # Members are spaced by a constant stride, so the median is the middle one.
+        np.testing.assert_allclose(computed["median"][0], forecast[1])
+
+    def test_time_and_spatial_dimensions_keep_their_order(self):
+        forecast = np.zeros((3, 2, 4, 5))
+
+        computed = compute_ensemble_statistics(forecast, ["mean"])
+
+        assert computed["mean"].shape == (1, 2, 4, 5)
+
+    def test_nan_members_propagate_rather_than_being_ignored(self):
+        # np.median/np.mean/np.percentile are not NaN-aware, so a single
+        # missing member makes the whole grid point missing.
+        forecast = np.array([1.0, np.nan, 3.0]).reshape(3, 1, 1, 1)
+
+        computed = compute_ensemble_statistics(forecast, ["median", "mean", "p10", "p90"])
+
+        for values in computed.values():
+            assert np.isnan(values).all()
+
+    def test_a_nan_at_one_grid_point_does_not_affect_its_neighbours(self):
+        forecast = np.full((3, 1, 1, 2), 2.0)
+        forecast[1, 0, 0, 0] = np.nan
+
+        computed = compute_ensemble_statistics(forecast, ["mean"])
+
+        assert np.isnan(computed["mean"][0, 0, 0, 0])
+        assert computed["mean"][0, 0, 0, 1] == 2.0
+
 
 class TestMakePvlibClearskyDataset:
     @pytest.fixture
@@ -372,6 +545,10 @@ class TestProbabilisticAdvectionForecast:
     def motion_field(self):
         return np.zeros((2, 32, 32))
 
+    @pytest.fixture
+    def moving_motion_field(self):
+        return np.full((2, 32, 32), 2.0)
+
     def test_deterministic_forecast_shape(self, ratio_data, motion_field):
         forecast = probabilistic_advection_forecast(
             ratio_data, motion_field, n_steps=3, ens_members=1, alpha=0.0, beta=0.0
@@ -402,3 +579,107 @@ class TestProbabilisticAdvectionForecast:
 
         np.testing.assert_allclose(forecast[1], forecast[0], atol=1e-6)
         np.testing.assert_allclose(forecast[2], forecast[0], atol=1e-6)
+
+    def test_no_infinite_values_are_produced(self, ratio_data, moving_motion_field):
+        forecast = probabilistic_advection_forecast(
+            ratio_data, moving_motion_field, n_steps=3, ens_members=1, alpha=0.0, beta=0.0
+        )
+
+        assert not np.isinf(forecast).any()
+
+    def test_a_zero_motion_field_introduces_no_missing_values(
+        self, ratio_data, motion_field
+    ):
+        # With no advection nothing is carried in from outside the grid, so a
+        # NaN here would mean the model invented one.
+        forecast = probabilistic_advection_forecast(
+            ratio_data, motion_field, n_steps=3, ens_members=1, alpha=0.0, beta=0.0
+        )
+
+        assert not np.isnan(forecast).any()
+
+    def test_advection_only_loses_data_at_the_inflow_edge(
+        self, ratio_data, moving_motion_field
+    ):
+        # Cells advected in from beyond the domain are unknown, so NaNs are
+        # expected to grow with lead time but never fill the grid.
+        forecast = probabilistic_advection_forecast(
+            ratio_data, moving_motion_field, n_steps=3, ens_members=1, alpha=0.0, beta=0.0
+        )
+
+        missing_per_step = [int(np.isnan(step).sum()) for step in forecast]
+        assert missing_per_step[0] > 0
+        assert missing_per_step == sorted(missing_per_step)
+        assert missing_per_step[-1] < forecast[0].size
+
+
+class TestEnsembleReproducibility:
+    """The model seeds each member with its own index (see SolarSTEPS'
+    ProbabilisticAdvection.maps_forecast), so forecasts are reproducible
+    without the test suite touching the global random state."""
+
+    @pytest.fixture
+    def ratio_data(self):
+        rows, cols = np.meshgrid(np.arange(24), np.arange(24), indexing="ij")
+        return np.stack(
+            [0.5 + 0.4 * np.sin((rows + cols - 3.0 * step) / 6.0) for step in range(4)]
+        ).astype(np.float64)
+
+    @pytest.fixture
+    def motion_field(self):
+        return np.full((2, 24, 24), 0.5)
+
+    def forecast(self, ratio_data, motion_field, ens_members=4):
+        return probabilistic_advection_forecast(
+            ratio_data,
+            motion_field,
+            n_steps=3,
+            ens_members=ens_members,
+            alpha=9.23,
+            beta=0.15,
+        )
+
+    def test_repeated_runs_produce_identical_ensembles(self, ratio_data, motion_field):
+        first = self.forecast(ratio_data, motion_field)
+        second = self.forecast(ratio_data, motion_field)
+
+        np.testing.assert_array_equal(first, second)
+
+    def test_the_result_does_not_depend_on_the_global_random_state(
+        self, ratio_data, motion_field
+    ):
+        baseline = self.forecast(ratio_data, motion_field)
+
+        np.random.seed(12345)
+        after_seeding = self.forecast(ratio_data, motion_field)
+
+        np.testing.assert_array_equal(baseline, after_seeding)
+
+    def test_deterministic_runs_are_reproducible(self, ratio_data, motion_field):
+        first = probabilistic_advection_forecast(
+            ratio_data, motion_field, n_steps=3, ens_members=1, alpha=0.0, beta=0.0
+        )
+        second = probabilistic_advection_forecast(
+            ratio_data, motion_field, n_steps=3, ens_members=1, alpha=0.0, beta=0.0
+        )
+
+        np.testing.assert_array_equal(first, second)
+
+    def test_every_requested_member_is_generated(self, ratio_data, motion_field):
+        forecast = self.forecast(ratio_data, motion_field, ens_members=6)
+
+        assert forecast.shape == (6, 3, 24, 24)
+
+    def test_members_seeded_differently_give_different_forecasts(
+        self, ratio_data, motion_field
+    ):
+        forecast = self.forecast(ratio_data, motion_field)
+
+        for member in range(1, forecast.shape[0]):
+            assert not np.allclose(forecast[member], forecast[0], equal_nan=True)
+
+    def test_perturbed_members_stay_finite(self, ratio_data, motion_field):
+        forecast = self.forecast(ratio_data, motion_field)
+
+        assert not np.isinf(forecast).any()
+        assert np.isfinite(forecast).any()

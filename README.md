@@ -43,31 +43,41 @@ sunflow
 ```
 
 ## Running the tests
-The test suite is written with [pytest](https://docs.pytest.org/) and lives in `tests/`.
-It runs fully offline: no network access, credentials or real satellite data are
-required, as the tests generate synthetic NetCDF input in temporary directories.
+`uv sync` installs the development dependencies (pytest, pytest-cov and
+pre-commit) along with the runtime ones. The suite lives in `tests/`:
 
 ```shell
-uv run pytest
+uv run pytest                                   # whole suite
+uv run pytest tests/test_forecast.py            # one module
+uv run pytest -k clearsky                       # tests matching a keyword
+uv run pytest --cov=sunflow --cov-report=term-missing   # coverage
 ```
 
-To see which lines are covered:
+The linters are run through pre-commit:
 
 ```shell
-uv run pytest --cov=sunflow --cov-report=term-missing
+uv run pre-commit run --all-files               # all hooks
+uv run pre-commit run black --all-files         # a single hook
 ```
 
-Useful variations:
+Note that pre-commit only inspects files that git tracks, so `git add` new files
+before running it.
 
-```shell
-uv run pytest tests/test_forecast.py        # one module
-uv run pytest -k clearsky                   # tests matching a keyword
-uv run pytest -x -vv                        # stop at the first failure, verbose
-```
+Both the tests and the linters run on every push and pull request via GitHub
+Actions (`.github/workflows/tests.yml` and `.github/workflows/pre-commit.yml`).
 
-Both the tests and the pre-commit linters run automatically on every push and
-pull request via GitHub Actions (`.github/workflows/tests.yml` and
-`.github/workflows/pre-commit.yml`).
+### What the tests do and do not cover
+The suite runs fully offline and deterministically: it generates synthetic
+NetCDF input in temporary directories, replaces the S3 filesystem and HTTP
+layer with in-memory doubles, and needs no network access, credentials or real
+satellite data. Ensemble forecasts are reproducible because `SolarSTEPS` seeds
+each member with its own index.
+
+The consequence is that the tests verify sunflow's own logic, not its
+integrations. They do not check that real KNMI or DWD responses parse, that a
+real S3 endpoint behaves as the double does, or that forecasts are
+meteorologically skilful — only that the pipeline transforms the data as
+specified. Changes to external data formats will not be caught here.
 
 ## Container Usage
 
